@@ -47,7 +47,7 @@ Checked implementation items do not imply that every multiplayer interaction has
 - [x] Return the room to the lobby after the game ends.
 - [x] Pause the active game when a player disconnects; allow the host to resume while the player is away, and restore the saved pause preference after they reconnect. Lobby-only disconnects still expire after two minutes.
 - [x] Gray out disconnected players' table seats and show a yellow disconnected alert beneath each seat.
-- [x] Provide a host-only Close Lobby control in the lobby and keep the gameplay control labeled Exit Game.
+- [x] Provide a host-only Close Lobby control in the lobby and expose confirmed Exit Game or Leave Game actions through GameHub's reusable Game settings tab.
 - [x] Hide the room code by default for non-host players while showing it by default to the host.
 - [x] Preserve a reconnecting active player's remaining turn time and allow one short grace period per turn, capped at the configured turn duration, then continue normal automatic turn play if the timer expires.
 - [x] Send recent face-up cards in reconnect snapshots so the board restores the visible pile after reconnecting.
@@ -73,6 +73,8 @@ Checked implementation items do not imply that every multiplayer interaction has
 
 ### Client gameplay
 
+- [x] Keep active gameplay fixed to the usable mobile viewport so browser chrome and the on-screen keyboard cannot push the board off-screen.
+- [x] Reserve space for GameHub's compact Settings shortcut above the package-owned Pause and connection-latency row on narrow screens.
 - [x] Render each player's public state without revealing hidden cards.
 - [x] Render the central pile and the most recently played card.
 - [x] Provide server-validated play-card and slap actions.
@@ -82,30 +84,36 @@ Checked implementation items do not imply that every multiplayer interaction has
 - [x] Place play-card and slap controls immediately below the arena.
 - [x] Display action and challenge messages on the table rather than below it.
 - [x] Show late joiners in a dedicated in-game spectator list, including connection status and host removal controls.
+- [x] Preserve spectator-list updates that arrive while the game client mounts so each spectator sees themselves, allow spectators to return to the lobby through a dedicated confirmation, and offer lobby waiters a Spectate Game action while play remains active.
 - [x] Lay out each player avatar beside their name and card count, with an underline beneath the player details.
 - [x] Highlight the entire current player's seat.
 - [x] Animate cards moving from the pile into the pile winner's area and outline the winner in gold.
 - [x] Animate a hand moving from the slapper's seat to the pile for valid and invalid slap attempts.
 - [x] Animate and retain the final played card while highlighting the game winner in gold.
 - [x] Place a host-only pause/resume button at the upper-right of the gameplay panel.
-- [x] Place a host-only Close Lobby control in the lobby and an Exit Game control in gameplay, each with its own in-app confirmation modal.
+- [x] Place a host-only Close Lobby control in the lobby and route the Game settings tab's Exit/Leave action through the appropriate in-app confirmation modal.
 - [x] Put a host-only Kick button beside a disconnected player's table alert.
 - [x] Make the slap-rules list collapsible.
+- [x] On narrow screens, place the collapsed rules Show control directly beside the Slap Rules label without changing the expanded panel or Hide control.
 - [x] Show enabled slap patterns and the false-slap penalty in the upper-left of the gameplay panel.
 - [x] Keep turn-state messages neutral; do not announce when the current pile matches a slap pattern.
 - [x] Show a chat panel only for games whose definitions enable chat.
 - [x] Show the synchronized turn countdown below the table while reserving its layout space when hidden.
+- [x] Keep the current whole seconds stationary at the right inside the timer track above its moving fill, align the timer to both action-button edges, and scale the complete control group together on narrow screens.
 - [x] Decorate the countdown's uncovered track with a blue gradient and progressively revealed sleep marks, ending with a sleeping bear, without changing authoritative timer behavior.
 - [x] Show each browser its latest display-only network round-trip time in the upper-right; never use that client-acknowledged measurement for slap arbitration.
 - [x] Show server connection state as a colored dot with status text on the main menu, in the lobby, and beside the gameplay controls.
 - [x] Fit active gameplay into the browser viewport without page scrolling; overlay Chat and Spectators in one wide bottom-left tab panel with an explicit viewport-relative Expand/Collapse control; place the timer and same-level action buttons in the open bottom-right area; and show turn text directly above the central pile count.
 - [x] Let the Chat/Spectators panel collapse into a small round chat button: it opens at medium size by default, the arrow switches between medium and large, and a small diagonal-arrow button on the panel's corner collapses it to the circle. Reopening restores the size it had before it was collapsed, a new game starts at medium again, and the circle shows an unread count (capped at 9+) for messages from other players that arrived while it was collapsed.
+- [x] Give the side-panel expand and minimize controls separate, lighter utility-button surfaces so they remain visually distinct from the Chat and Spectators tabs.
+- [x] Keep the collapsed Slap Rules Show button in the top-right while shrinking the surrounding box around its title at every viewport size, then restore the full rules width when expanded.
 - [x] Style "Play a Card" and "Slap" buttons as prominent game-action controls, with a secondary "Bring the pain" label and fire accents on Slap.
 - [x] Keep slaps available during active play even when no pattern matches; disable them only when no face-up cards are present, the game is paused or finished, or a non-card-play animation is in progress.
+- [x] Disable Play a Card for every player while a completed challenge is waiting through its final slap window, even though the next player remains identified in public state.
 - [x] Restore active players from a complete reconnect snapshot.
 - [x] Reuse the limited public game-state projection for spectators so they receive the visible pile, public player state, timers, and live animations without hidden decks.
 - [x] Use game-specific background music and synchronize card, slap, pile-win, and game-win sounds with their corresponding presentation animations.
-- [x] Expose persistent, independently adjustable music, player-join, and gameplay volume controls through the personal GameHub Settings Audio tab (0% disables a category), and wait for browser-approved user interaction before starting music.
+- [x] Expose persistent, independently adjustable music, lobby alert, and gameplay volume controls through the personal GameHub Settings Audio tab (0% disables a category), and wait for browser-approved user interaction before starting music.
 
 ### Table presentation
 

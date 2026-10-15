@@ -19,8 +19,6 @@ const egyptianWarPileStack = findEgyptianWarElement("#egyptian-war-pile-stack");
 const egyptianWarPlayCardButton = findEgyptianWarElement("#egyptian-war-play-card");
 const egyptianWarSlapButton = findEgyptianWarElement("#egyptian-war-slap");
 const egyptianWarPauseButton = findEgyptianWarElement("#egyptian-war-pause");
-const egyptianWarExitButton = findEgyptianWarElement("#egyptian-war-exit-game");
-const egyptianWarLeaveButton = findEgyptianWarElement("#egyptian-war-leave-game");
 const egyptianWarHostControls = findEgyptianWarElement("#egyptian-war-host-controls");
 const egyptianWarSlapRulesList = findEgyptianWarElement("#egyptian-war-slap-rules-list");
 const toggleSlapRulesButton = findEgyptianWarElement("#toggle-slap-rules");
@@ -59,6 +57,7 @@ let revealedEgyptianWarWinnerAnimationId = null;
 let egyptianWarTimerDurationMs = 15000;
 let egyptianWarTimerRemainingMs = null;
 let egyptianWarTimerDeadline = null;
+let egyptianWarInputUnsubscribers = [];
 
 function getAudio() {
   return currentContext?.audio ?? globalScope.GameHubAudio ?? {
@@ -191,7 +190,6 @@ function showEgyptianWarGame(game) {
   egyptianWarTimerRemainingMs = null;
   egyptianWarTimerDeadline = null;
   egyptianWarHostControls.classList.toggle("d-none", !currentContext.isHost);
-  egyptianWarLeaveButton.classList.toggle("d-none", currentContext.isHost);
   egyptianWarPauseButton.textContent =
     game.isPaused ? "Resume" : "Pause";
   egyptianWarPauseButton.setAttribute(
@@ -1026,6 +1024,7 @@ function renderEgyptianWarState(state) {
     state.status !== "playing" ||
     state.isPaused ||
     state.isAnimating ||
+    state.canPlayCard !== true ||
     state.currentPlayerId !== currentContext.memberId;
   egyptianWarSlapButton.disabled =
     (currentContext.role === "spectator") ||
@@ -1108,26 +1107,34 @@ toggleSlapRulesButton.addEventListener("click", () => {
   toggleSlapRulesButton.setAttribute("aria-expanded", String(expanded));
   toggleSlapRulesButton.textContent = expanded ? "Hide" : "Show";
   egyptianWarSlapRulesList.hidden = !expanded;
+  egyptianWarSlapRulesList.parentElement.classList.toggle(
+    "is-collapsed",
+    !expanded
+  );
 });
-egyptianWarPlayCardButton.addEventListener("click", async () => {
+async function playEgyptianWarCard() {
+  if (egyptianWarPlayCardButton.disabled) return;
   const response = await currentContext?.submitAction({ type: "play-card" });
   if (response && !response.success) currentContext.notify(response.message);
-});
-egyptianWarSlapButton.addEventListener("click", async () => {
+}
+
+async function slapEgyptianWarPile() {
+  if (egyptianWarSlapButton.disabled) return;
   const response = await currentContext?.submitAction({
     type: "slap",
     payload: { pileVersion: previousEgyptianWarState?.pileVersion }
   });
   if (response && !response.success) currentContext.notify(response.message);
-});
+}
+
+egyptianWarPlayCardButton.addEventListener("click", playEgyptianWarCard);
+egyptianWarSlapButton.addEventListener("click", slapEgyptianWarPile);
 egyptianWarPauseButton.addEventListener("click", async () => {
   if (!currentContext?.isHost) return;
   const isPaused = egyptianWarPauseButton.getAttribute("aria-pressed") !== "true";
   const response = await currentContext.requestPause(isPaused);
   if (!response.success) currentContext.notify(response.message);
 });
-egyptianWarExitButton.addEventListener("click", () => currentContext?.requestExit());
-egyptianWarLeaveButton.addEventListener("click", () => currentContext?.requestLeave());
 egyptianWarChatForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = egyptianWarChatInput.value.trim();
@@ -1147,6 +1154,10 @@ const egyptianWarClientModule = {
   mount(context) {
     currentContext = context;
     currentSettings = context.launchData.settings ?? {};
+    egyptianWarInputUnsubscribers = [
+      context.input?.onAction("play-card", playEgyptianWarCard),
+      context.input?.onAction("slap", slapEgyptianWarPile)
+    ].filter(Boolean);
     showEgyptianWarGame(context.launchData);
     timerInterval = setInterval(renderEgyptianWarTurnTimer, 100);
     return {
@@ -1164,6 +1175,8 @@ const egyptianWarClientModule = {
         if (event.type === "chat-message") renderChatMessage(event.payload);
       },
       destroy() {
+        for (const unsubscribe of egyptianWarInputUnsubscribers) unsubscribe();
+        egyptianWarInputUnsubscribers = [];
         destroyEgyptianWarGame();
         clearInterval(timerInterval);
         timerInterval = null;
