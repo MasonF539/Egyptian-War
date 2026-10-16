@@ -750,7 +750,7 @@ function trackPileVersion<T>(state: EgyptianWarState, run: () => T): T {
 
 export type EgyptianWarSlapCooldownStatus = "none" | "waiting";
 
-/** Prevent repeated free slaps until one more card has been played. */
+/** Prevent another slap until one more card has been played. */
 export function startEgyptianWarSlapCooldown(
   state: EgyptianWarState,
   playerId: string
@@ -761,8 +761,8 @@ export function startEgyptianWarSlapCooldown(
 }
 
 /**
- * Returns the status of an eliminated player's slap cooldown. Once another
- * card has been played, the cooldown clears and that new card may be slapped.
+ * Returns the status of a player's slap cooldown. Once another card has been
+ * played, the cooldown clears and that new card may be slapped.
  */
 export function checkEgyptianWarSlapCooldown(
   state: EgyptianWarState,
@@ -843,6 +843,7 @@ function applyAction(
 
       if (player.cards.length === 0) {
         player.isEliminated = true;
+        startEgyptianWarSlapCooldown(state, playerId);
         if (endIfOnePlayerOwnsRemainingCards(state)) {
           return state.activityMessage;
         }

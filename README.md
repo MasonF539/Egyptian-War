@@ -52,10 +52,10 @@ Slap patterns are validated by the server and configured in the lobby. The
 descending rank sequence, including Ace-low and Ace-high sequences. The
 "Tens" pattern checks only two directly adjacent number cards that total ten;
 an Ace counts as one. An active player who false-slaps forfeits the configured
-number of cards, up to the number they hold. An eliminated player has no cards
-to forfeit, so a false slap prevents them from slapping the unchanged pile
-again. The cooldown clears when the next card is played, allowing that card to
-be slapped and the eliminated player to re-enter immediately.
+number of cards, up to the number they hold. A false slap by an eliminated
+player, or one that forfeits a player's last card, prevents another slap on the
+unchanged pile. The cooldown clears when the next card is played, allowing that
+new card to be slapped and the eliminated player to re-enter immediately.
 Invalid reentry attempts use the same visible one-hand slap animation as other
 false slaps; additional attempts during the cooldown do not create extra hands.
 

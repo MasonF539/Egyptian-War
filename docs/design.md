@@ -60,7 +60,7 @@ Checked implementation items do not imply that every multiplayer interaction has
 - [x] Keep face-down false-slap penalty cards out of slap-pattern validation so repeated penalties cannot manufacture a valid slap.
 - [x] End the game when only one player has cards and the face-up pile offers no valid slap for an eliminated player to reenter.
 - [x] Never let a challenger answer their own challenge: when nobody but the challenger can continue, the challenger wins the pile (or the slap window opens).
-- [x] Prevent an eliminated player who false-slaps from repeatedly slapping the unchanged pile; clear that cooldown when the next card is played so they can immediately slap back in.
+- [x] Prevent a player who false-slaps while out, or false-slaps away their last card, from repeatedly slapping the unchanged pile; clear that cooldown when the next card is played so they can immediately slap back in.
 - [x] Keep slap-pattern information off the wire: the public state carries a `pileVersion` but no slappable flag, and messages about a pending pile are neutral.
 - [x] Have slaps carry the `pileVersion` the player last saw. A slap that lost a short race with a card play (previous version, previous pile slappable, under 350 ms) is ignored without a penalty.
 - [x] Allow a player to leave voluntarily; their cards are held face-down and added to the next pile, just like a host removal. If removing a player leaves nobody holding cards, the remaining cards go to the next player in turn order immediately.
@@ -121,6 +121,6 @@ Checked implementation items do not imply that every multiplayer interaction has
 - [x] Give the CSS table a layered casino-felt, wooden-rail, depth, and drop-shadow treatment while retaining its original oval shape.
 - [x] Draw cards as accessible HTML/CSS playing-card faces; do not depend on external card image assets.
 - [x] Render mirrored card corners, distinct face-card styling, and a Joker with vertical JOKER labels and a decorative center that is distinguishable from a Jack.
-- [x] Render slap hands with the original splayed-hand emoji on desktop and a clearer raised-palm variant on coarse-pointer/mobile devices, scale them and their stopping distance with the rendered card size, keep their shadows visually below the hand at every seat rotation, and layer later collected attempts above the official winner.
+- [x] Render slap hands with the splayed-hand emoji on desktop and the backhand emoji on coarse-pointer/mobile devices, scale them and their stopping distance with the rendered card size, keep their shadows visually below the hand at every seat rotation, and layer later collected attempts above the official winner.
 - [x] Keep the table, player seats, card motion, spectator area, and controls usable on narrow screens and with reduced-motion preferences.
 - Offer chat per game rather than requiring it in every game; games that rely on secrecy or fast rounds can opt out, while social multiplayer games can enable it.

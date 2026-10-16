@@ -1,6 +1,6 @@
 {
   "name": "@masonf539/egyptian-war",
-  "version": "1.0.1-beta.2",
+  "version": "1.0.1-beta.3",
   "description": "Egyptian War game plugin for GameHub.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

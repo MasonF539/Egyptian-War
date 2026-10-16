@@ -145,9 +145,9 @@ test("animates single and invalid slaps", () => {
   client.animateEgyptianWarOutcome(animation());
   assert.equal(document.querySelectorAll(".egyptian-war-flying-hand").length, 1);
   assert.equal(document.querySelectorAll(".egyptian-war-slap-hand-desktop").length, 1);
-  assert.equal(document.querySelector(".egyptian-war-slap-hand-desktop").textContent, "💐️");
+  assert.equal(document.querySelector(".egyptian-war-slap-hand-desktop").textContent, "\u{1F590}\uFE0F");
   assert.equal(document.querySelectorAll(".egyptian-war-slap-hand-mobile").length, 1);
-  assert.equal(document.querySelector(".egyptian-war-slap-hand-mobile").textContent, "✋");
+  assert.equal(document.querySelector(".egyptian-war-slap-hand-mobile").textContent, "\u{1F91A}");
 
   client.animateEgyptianWarOutcome(animation({
     winnerId: null,

@@ -171,7 +171,7 @@ export const egyptianWar: GameDefinition = {
 
 export const egyptianWarManifest: GamePluginManifest = {
   apiVersion: gameHubGameApiVersion,
-  packageVersion: "1.0.1-beta.2",
+  packageVersion: "1.0.1-beta.3",
   definition: egyptianWar,
   client: {
     delivery: "embedded",

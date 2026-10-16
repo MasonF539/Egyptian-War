@@ -1095,7 +1095,7 @@ test("an eliminated player's cooldown clears on the next card and allows reentry
   assert.equal(state.pile.length, 0);
 });
 
-test("a player who slaps away their last card can reenter on the next card", () => {
+test("a player who false-slaps away their last card waits only for the next card", () => {
   const state = makeState(
     [
       [card("5", "p1-last")],
@@ -1112,7 +1112,11 @@ test("a player who slaps away their last card can reenter on the next card", () 
   applyEgyptianWarAction(state, players[0].id, "slap");
   assert.equal(state.players[0].cards.length, 0);
   assert.equal(state.players[0].isEliminated, true);
-  assert.equal(state.players[0].slapCooldownUntilCardPlayCount ?? null, null);
+  assert.equal(state.players[0].slapCooldownUntilCardPlayCount, 1);
+  assert.throws(
+    () => applyEgyptianWarAction(state, players[0].id, "slap"),
+    /wait until the next card is played/i
+  );
 
   applyEgyptianWarAction(state, players[1].id, "play-card");
   applyEgyptianWarAction(state, players[0].id, "slap");

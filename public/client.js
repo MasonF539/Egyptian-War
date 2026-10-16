@@ -86,11 +86,11 @@ function createEgyptianWarSlapHand() {
 
   const desktopHand = document.createElement("span");
   desktopHand.className = "egyptian-war-slap-hand-desktop";
-  desktopHand.textContent = "💐️";
+  desktopHand.textContent = "\u{1F590}\uFE0F";
 
   const mobileHand = document.createElement("span");
   mobileHand.className = "egyptian-war-slap-hand-mobile";
-  mobileHand.textContent = "✋";
+  mobileHand.textContent = "\u{1F91A}";
 
   handGlyph.append(desktopHand, mobileHand);
   return handGlyph;
