@@ -755,25 +755,26 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   animation-delay: inherit;
 }
 
-.egyptian-war-slap-hand-svg {
+.egyptian-war-slap-hand-desktop,
+.egyptian-war-slap-hand-mobile {
   display: block;
   width: 1em;
-  height: 1.2em;
-  overflow: visible;
+  height: 1em;
+  line-height: 1;
 }
 
-.egyptian-war-slap-hand-shape {
-  fill: #ffc34d;
-  stroke: #aa6818;
-  stroke-width: 3;
-  stroke-linejoin: round;
+.egyptian-war-slap-hand-mobile {
+  display: none;
 }
 
-.egyptian-war-slap-hand-detail {
-  fill: none;
-  stroke: #d78b25;
-  stroke-width: 3;
-  stroke-linecap: round;
+@media (pointer: coarse) {
+  .egyptian-war-slap-hand-desktop {
+    display: none;
+  }
+
+  .egyptian-war-slap-hand-mobile {
+    display: block;
+  }
 }
 
 @keyframes egyptian-war-hand-travel {

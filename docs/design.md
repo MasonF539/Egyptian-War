@@ -121,6 +121,6 @@ Checked implementation items do not imply that every multiplayer interaction has
 - [x] Give the CSS table a layered casino-felt, wooden-rail, depth, and drop-shadow treatment while retaining its original oval shape.
 - [x] Draw cards as accessible HTML/CSS playing-card faces; do not depend on external card image assets.
 - [x] Render mirrored card corners, distinct face-card styling, and a Joker with vertical JOKER labels and a decorative center that is distinguishable from a Jack.
-- [x] Render slap hands with a package-owned palm graphic for consistent mobile orientation, scale them and their stopping distance with the rendered card size, keep their shadows visually below the hand at every seat rotation, and layer later collected attempts above the official winner.
+- [x] Render slap hands with the original splayed-hand emoji on desktop and a clearer raised-palm variant on coarse-pointer/mobile devices, scale them and their stopping distance with the rendered card size, keep their shadows visually below the hand at every seat rotation, and layer later collected attempts above the official winner.
 - [x] Keep the table, player seats, card motion, spectator area, and controls usable on narrow screens and with reduced-motion preferences.
 - Offer chat per game rather than requiring it in every game; games that rely on secrecy or fast rounds can opt out, while social multiplayer games can enable it.
