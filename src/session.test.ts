@@ -250,7 +250,7 @@ test("a player with no cards cannot lock the table with free false slaps", { tim
   }
 });
 
-test("an eliminated player's cooldown blocks their slap on the next played card", { timeout: 15_000 }, async () => {
+test("an eliminated player's cooldown allows their slap on the next played card", { timeout: 15_000 }, async () => {
   const { session } = makeSession();
 
   try {
@@ -269,12 +269,13 @@ test("an eliminated player's cooldown blocks their slap on the next played card"
     assert.equal(falseSlap.success, false);
     assert.equal(internals(session).state.players[2].slapCooldownUntilCardPlayCount, 1);
 
-    // Playing a 2 creates a sandwich, but the eliminated player must skip it.
+    // Playing a 2 creates a sandwich and clears the eliminated player's cooldown.
     assert.equal((await session.handleAction("host", { type: "play-card" })).success, true);
-    const blocked = await session.handleAction("third", { type: "slap" });
-    assert.equal(blocked.success, false);
-    assert.match(blocked.message ?? "", /one-card slap cooldown/i);
+    const slap = await session.handleAction("third", { type: "slap" });
+    assert.equal(slap.success, true);
+    await waitUntil(() => internals(session).state.players[2].cards.length > 0);
     assert.equal(internals(session).state.players[2].slapCooldownUntilCardPlayCount, null);
+    assert.equal(internals(session).state.players[2].isEliminated, false);
   } finally {
     session.dispose();
   }

@@ -53,9 +53,9 @@ descending rank sequence, including Ace-low and Ace-high sequences. The
 "Tens" pattern checks only two directly adjacent number cards that total ten;
 an Ace counts as one. An active player who false-slaps forfeits the configured
 number of cards, up to the number they hold. An eliminated player has no cards
-to forfeit, so a false slap instead makes them miss the next card's slap
-opportunity. A valid slap can still let an eliminated player re-enter when
-their cooldown is clear.
+to forfeit, so a false slap prevents them from slapping the unchanged pile
+again. The cooldown clears when the next card is played, allowing that card to
+be slapped and the eliminated player to re-enter immediately.
 
 ## Installation preparation
 

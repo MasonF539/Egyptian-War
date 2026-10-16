@@ -1043,7 +1043,7 @@ test("a challenger never has to answer their own challenge", () => {
   assert.equal(state.winnerId, players[0].id);
 });
 
-test("an eliminated player's false slap starts a one-card cooldown", () => {
+test("an eliminated player's false slap waits for another card", () => {
   const state = makeState(
     [
       [card("4", "p1-4"), card("5", "p1-5")],
@@ -1067,7 +1067,7 @@ test("an eliminated player's false slap starts a one-card cooldown", () => {
   );
 });
 
-test("an eliminated player's cooldown blocks the next card only, then allows reentry", () => {
+test("an eliminated player's cooldown clears on the next card and allows reentry", () => {
   const state = makeState(
     [
       [card("2", "p1-2"), card("8", "p1-8")],
@@ -1088,19 +1088,37 @@ test("an eliminated player's cooldown blocks the next card only, then allows ree
   applyEgyptianWarAction(state, players[0].id, "play-card");
   assert.equal(state.cardsPlayedCount, 1);
 
-  assert.throws(
-    () => applyEgyptianWarAction(state, players[2].id, "slap"),
-    /one-card slap cooldown/i
-  );
+  applyEgyptianWarAction(state, players[2].id, "slap");
   assert.equal(state.players[2].slapCooldownUntilCardPlayCount, null);
-  assert.equal(state.players[2].cards.length, 0);
+  assert.equal(state.players[2].isEliminated, false);
+  assert.equal(state.players[2].cards.length, 3);
+  assert.equal(state.pile.length, 0);
+});
+
+test("a player who slaps away their last card can reenter on the next card", () => {
+  const state = makeState(
+    [
+      [card("5", "p1-last")],
+      [card("2", "p2-2"), card("8", "p2-8")],
+      [card("9", "p3-9")]
+    ],
+    {
+      pile: [card("2", "pile-2"), card("3", "pile-3")],
+      currentPlayerIndex: 1,
+      settings: { ...settings, falseSlapPenaltyCards: 1 }
+    }
+  );
+
+  applyEgyptianWarAction(state, players[0].id, "slap");
+  assert.equal(state.players[0].cards.length, 0);
+  assert.equal(state.players[0].isEliminated, true);
+  assert.equal(state.players[0].slapCooldownUntilCardPlayCount ?? null, null);
 
   applyEgyptianWarAction(state, players[1].id, "play-card");
-  assert.equal(state.cardsPlayedCount, 2);
-  applyEgyptianWarAction(state, players[2].id, "slap");
+  applyEgyptianWarAction(state, players[0].id, "slap");
 
-  assert.equal(state.players[2].isEliminated, false);
-  assert.equal(state.players[2].cards.length, 4);
+  assert.equal(state.players[0].isEliminated, false);
+  assert.equal(state.players[0].cards.length, 4);
   assert.equal(state.pile.length, 0);
 });
 

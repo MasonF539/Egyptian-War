@@ -748,9 +748,9 @@ function trackPileVersion<T>(state: EgyptianWarState, run: () => T): T {
   }
 }
 
-export type EgyptianWarSlapCooldownStatus = "none" | "waiting" | "blocked";
+export type EgyptianWarSlapCooldownStatus = "none" | "waiting";
 
-/** Start a cooldown that lasts until one more card has been played. */
+/** Prevent repeated free slaps until one more card has been played. */
 export function startEgyptianWarSlapCooldown(
   state: EgyptianWarState,
   playerId: string
@@ -761,8 +761,8 @@ export function startEgyptianWarSlapCooldown(
 }
 
 /**
- * Returns the status of an eliminated player's one-card slap cooldown.
- * The next card's opportunity is consumed the first time they try to slap on it.
+ * Returns the status of an eliminated player's slap cooldown. Once another
+ * card has been played, the cooldown clears and that new card may be slapped.
  */
 export function checkEgyptianWarSlapCooldown(
   state: EgyptianWarState,
@@ -776,7 +776,7 @@ export function checkEgyptianWarSlapCooldown(
   if (cardsPlayedCount < cooldownTarget) return "waiting";
 
   player.slapCooldownUntilCardPlayCount = null;
-  return cardsPlayedCount === cooldownTarget ? "blocked" : "none";
+  return "none";
 }
 
 export function applyEgyptianWarAction(
@@ -821,12 +821,6 @@ function applyAction(
         "You must wait until the next card is played before slapping again."
       );
     }
-    if (slapCooldown === "blocked") {
-      throw new EgyptianWarRuleError(
-        "Your one-card slap cooldown blocked that slap."
-      );
-    }
-
     const faceUpPile = state.pile.slice(state.penaltyPileCardCount);
     if (faceUpPile.length === 0) {
       throw new EgyptianWarRuleError("There are no face-up cards to slap.");

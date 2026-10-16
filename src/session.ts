@@ -519,15 +519,6 @@ class EgyptianWarSession implements GameSession {
         });
         return;
       }
-      if (slapCooldown === "blocked") {
-        respond({
-          success: false,
-          message: "Your one-card slap cooldown blocked that slap."
-        });
-        this.context.broadcastState();
-        return;
-      }
-
       if (isEgyptianWarStateSlappable(this.state)) {
         this.collectSlap(memberId, respond);
         return;
