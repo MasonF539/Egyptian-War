@@ -755,6 +755,27 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   animation-delay: inherit;
 }
 
+.egyptian-war-slap-hand-svg {
+  display: block;
+  width: 1em;
+  height: 1.2em;
+  overflow: visible;
+}
+
+.egyptian-war-slap-hand-shape {
+  fill: #ffc34d;
+  stroke: #aa6818;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.egyptian-war-slap-hand-detail {
+  fill: none;
+  stroke: #d78b25;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
 @keyframes egyptian-war-hand-travel {
   0% {
     opacity: 0;

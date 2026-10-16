@@ -38,7 +38,7 @@ Checked implementation items do not imply that every multiplayer interaction has
 - [x] Implement Jack, Queen, King, Ace, and Joker challenge attempts (Jokers allow 5 attempts).
 - [x] Award the pile to the most recent challenge-card player when a challenge fails, except while a valid final-attempt slap window is active.
 - [x] Validate slaps on the server and resolve competing slaps fairly.
-- [x] Use server receipt time for slap candidates so clients cannot improve their position by delaying timing acknowledgements. Collect requests for 200 ms, assign a fixed server-controlled 25 ms uncertainty to each candidate, compare candidates within the resulting 50 ms window, and select eligible candidates with smooth exponential weighting driven by Node's cryptographically secure random source.
+- [x] Use server receipt time for slap candidates so clients cannot improve their position by delaying timing acknowledgements. Collect requests for 300 ms, assign a fixed server-controlled 25 ms uncertainty to each candidate, compare candidates within the resulting 50 ms window, and select eligible candidates with smooth exponential weighting driven by Node's cryptographically secure random source.
 - [x] Finish accepted slap arbitration before honoring a host pause, and allow candidates accepted before a disconnect-triggered pause to resolve instead of silently discarding them.
 - [x] Skip players who run out of cards; continue the turn with the next eligible player.
 - [x] Pass an unfinished challenge to the next eligible player with the remaining attempts unchanged when its responder runs out of cards.
@@ -88,7 +88,7 @@ Checked implementation items do not imply that every multiplayer interaction has
 - [x] Lay out each player avatar beside their name and card count, with an underline beneath the player details.
 - [x] Highlight the entire current player's seat.
 - [x] Animate cards moving from the pile into the pile winner's area and outline the winner in gold.
-- [x] Animate a hand moving from the slapper's seat to the pile for valid and invalid slap attempts.
+- [x] Animate one hand moving from the slapper's seat to the pile for valid and invalid slap attempts, including invalid reentry attempts by eliminated players; suppress extra hands while their cooldown is active.
 - [x] Animate and retain the final played card while highlighting the game winner in gold.
 - [x] Place a host-only pause/resume button at the upper-right of the gameplay panel.
 - [x] Place a host-only Close Lobby control in the lobby and route the Game settings tab's Exit/Leave action through the appropriate in-app confirmation modal.
@@ -121,6 +121,6 @@ Checked implementation items do not imply that every multiplayer interaction has
 - [x] Give the CSS table a layered casino-felt, wooden-rail, depth, and drop-shadow treatment while retaining its original oval shape.
 - [x] Draw cards as accessible HTML/CSS playing-card faces; do not depend on external card image assets.
 - [x] Render mirrored card corners, distinct face-card styling, and a Joker with vertical JOKER labels and a decorative center that is distinguishable from a Jack.
-- [x] Scale slap hands and their stopping distance with the rendered card size, keep their shadows visually below the hand at every seat rotation, and layer later collected attempts above the official winner.
+- [x] Render slap hands with a package-owned palm graphic for consistent mobile orientation, scale them and their stopping distance with the rendered card size, keep their shadows visually below the hand at every seat rotation, and layer later collected attempts above the official winner.
 - [x] Keep the table, player seats, card motion, spectator area, and controls usable on narrow screens and with reduced-motion preferences.
 - Offer chat per game rather than requiring it in every game; games that rely on secrecy or fast rounds can opt out, while social multiplayer games can enable it.

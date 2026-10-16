@@ -12,7 +12,6 @@ import {
   applyEgyptianWarAction,
   checkEgyptianWarSlapCooldown,
   createEgyptianWarState,
-  startEgyptianWarSlapCooldown,
   createPublicEgyptianWarState,
   EgyptianWarRuleError,
   isEgyptianWarStateSlappable,
@@ -500,6 +499,16 @@ class EgyptianWarSession implements GameSession {
     }
 
     const isLiveSlap = action === "slap" && !isTurnTimeout && !isResolvedSlap;
+    if (
+      isLiveSlap &&
+      checkEgyptianWarSlapCooldown(this.state, memberId) === "waiting"
+    ) {
+      respond({
+        success: false,
+        message: "You must wait until the next card is played before slapping again."
+      });
+      return;
+    }
 
     if (
       this.isAnimating &&
@@ -511,14 +520,6 @@ class EgyptianWarSession implements GameSession {
     }
 
     if (isLiveSlap) {
-      const slapCooldown = checkEgyptianWarSlapCooldown(this.state, memberId);
-      if (slapCooldown === "waiting") {
-        respond({
-          success: false,
-          message: "You must wait until the next card is played before slapping again."
-        });
-        return;
-      }
       if (isEgyptianWarStateSlappable(this.state)) {
         this.collectSlap(memberId, respond);
         return;
@@ -539,19 +540,6 @@ class EgyptianWarSession implements GameSession {
         return;
       }
 
-      const eliminatedPlayer = this.state.players.find(
-        (player) => player.id === memberId
-      );
-      const faceUpCardCount =
-        this.state.pile.length - this.state.penaltyPileCardCount;
-      if (faceUpCardCount > 0 && eliminatedPlayer?.cards.length === 0) {
-        startEgyptianWarSlapCooldown(this.state, memberId);
-        respond({
-          success: false,
-          message: "You are out of cards and must wait until the next card is played before slapping again."
-        });
-        return;
-      }
     }
 
     if (this.pendingSlaps !== null && !isResolvedSlap) {

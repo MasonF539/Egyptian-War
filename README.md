@@ -56,6 +56,8 @@ number of cards, up to the number they hold. An eliminated player has no cards
 to forfeit, so a false slap prevents them from slapping the unchanged pile
 again. The cooldown clears when the next card is played, allowing that card to
 be slapped and the eliminated player to re-enter immediately.
+Invalid reentry attempts use the same visible one-hand slap animation as other
+false slaps; additional attempts during the cooldown do not create extra hands.
 
 ## Installation preparation
 

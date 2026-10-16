@@ -144,6 +144,7 @@ test("animates single and invalid slaps", () => {
 
   client.animateEgyptianWarOutcome(animation());
   assert.equal(document.querySelectorAll(".egyptian-war-flying-hand").length, 1);
+  assert.equal(document.querySelectorAll(".egyptian-war-slap-hand-svg").length, 1);
 
   client.animateEgyptianWarOutcome(animation({
     winnerId: null,

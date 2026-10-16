@@ -78,6 +78,18 @@ function createKickPlayerButton(member, className) {
   });
   return button;
 }
+
+function createEgyptianWarSlapHand() {
+  const handGlyph = document.createElement("span");
+  handGlyph.className = "egyptian-war-flying-hand-glyph";
+  handGlyph.setAttribute("aria-hidden", "true");
+  handGlyph.innerHTML = `
+    <svg class="egyptian-war-slap-hand-svg" viewBox="0 0 100 120" focusable="false">
+      <path class="egyptian-war-slap-hand-shape" d="M28 112c-11-7-17-20-17-35V58c0-5 4-9 9-9s9 4 9 9V28c0-6 4-10 9-10s9 4 9 10V17c0-6 4-10 9-10s9 4 9 10v7c1-5 5-8 10-8s9 4 9 10v42c0 27-14 45-38 47-7 1-13 0-18-3Z"/>
+      <path class="egyptian-war-slap-hand-detail" d="M29 58v19m18-49v38m18-42v42m19-40v43M25 82c12-6 25-4 34 6m-26 8c8-5 17-5 25 1"/>
+    </svg>`;
+  return handGlyph;
+}
 function renderEgyptianWarSlapRules(settings) {
   const rules = [
     settings.includeJokers && "Joker: always slappable",
@@ -112,7 +124,7 @@ function renderEgyptianWarSlapRules(settings) {
 
   const eliminatedCooldownItem = document.createElement("li");
   eliminatedCooldownItem.textContent =
-    "Eliminated player false slap: miss the next card's slap opportunity.";
+    "Eliminated player false slap: wait for another card before slapping again.";
   egyptianWarSlapRulesList.appendChild(eliminatedCooldownItem);
 }
 
@@ -569,9 +581,7 @@ function animateEgyptianWarOutcome(animation) {
 
       const hand = document.createElement("span");
       hand.className = "egyptian-war-flying-hand";
-      const handGlyph = document.createElement("span");
-      handGlyph.className = "egyptian-war-flying-hand-glyph";
-      handGlyph.textContent = "🖐️";
+      const handGlyph = createEgyptianWarSlapHand();
       hand.appendChild(handGlyph);
 
       hand.style.left = `${playerCenter.x}px`;
