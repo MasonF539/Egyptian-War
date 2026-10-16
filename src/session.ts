@@ -499,13 +499,16 @@ class EgyptianWarSession implements GameSession {
     }
 
     const isLiveSlap = action === "slap" && !isTurnTimeout && !isResolvedSlap;
-    if (
-      isLiveSlap &&
-      checkEgyptianWarSlapCooldown(this.state, memberId) === "waiting"
-    ) {
+    const slapCooldown = isLiveSlap
+      ? checkEgyptianWarSlapCooldown(this.state, memberId)
+      : { status: "none" as const };
+    if (slapCooldown.status === "waiting") {
+      const remaining = slapCooldown.cardPlacementsRemaining;
       respond({
         success: false,
-        message: "You must wait until the next card is played before slapping again."
+        message:
+          `You must wait for ${remaining} more card ` +
+          `${remaining === 1 ? "placement" : "placements"} before slapping again.`
       });
       return;
     }

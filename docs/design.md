@@ -60,7 +60,7 @@ Checked implementation items do not imply that every multiplayer interaction has
 - [x] Keep face-down false-slap penalty cards out of slap-pattern validation so repeated penalties cannot manufacture a valid slap.
 - [x] End the game when only one player has cards and the face-up pile offers no valid slap for an eliminated player to reenter.
 - [x] Never let a challenger answer their own challenge: when nobody but the challenger can continue, the challenger wins the pile (or the slap window opens).
-- [x] Prevent a player who false-slaps while out, or false-slaps away their last card, from repeatedly slapping the unchanged pile; clear that cooldown when the next card is played so they can immediately slap back in.
+- [x] Prevent a player who false-slaps away their last card from retrying the unchanged pile while allowing one attempt on the next played card. When an already eliminated player false-slaps, make them skip two played cards and allow another attempt on the third.
 - [x] Keep slap-pattern information off the wire: the public state carries a `pileVersion` but no slappable flag, and messages about a pending pile are neutral.
 - [x] Have slaps carry the `pileVersion` the player last saw. A slap that lost a short race with a card play (previous version, previous pile slappable, under 350 ms) is ignored without a penalty.
 - [x] Allow a player to leave voluntarily; their cards are held face-down and added to the next pile, just like a host removal. If removing a player leaves nobody holding cards, the remaining cards go to the next player in turn order immediately.

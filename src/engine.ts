@@ -748,21 +748,29 @@ function trackPileVersion<T>(state: EgyptianWarState, run: () => T): T {
   }
 }
 
-export type EgyptianWarSlapCooldownStatus = "none" | "waiting";
+export type EgyptianWarSlapCooldownStatus =
+  | { status: "none" }
+  | { status: "waiting"; cardPlacementsRemaining: number };
 
-/** Prevent another slap until one more card has been played. */
+/**
+ * Prevent another slap until the requested future card opportunity. An offset
+ * of 1 allows the next played card; an offset of 3 skips two cards and allows
+ * the third.
+ */
 export function startEgyptianWarSlapCooldown(
   state: EgyptianWarState,
-  playerId: string
+  playerId: string,
+  nextEligibleCardOffset = 1
 ): void {
   const player = state.players.find((candidate) => candidate.id === playerId);
   if (!player) return;
-  player.slapCooldownUntilCardPlayCount = (state.cardsPlayedCount ?? 0) + 1;
+  player.slapCooldownUntilCardPlayCount =
+    (state.cardsPlayedCount ?? 0) + nextEligibleCardOffset;
 }
 
 /**
- * Returns the status of a player's slap cooldown. Once another card has been
- * played, the cooldown clears and that new card may be slapped.
+ * Returns the status of a player's slap cooldown, including the number of card
+ * placements remaining before another attempt is allowed.
  */
 export function checkEgyptianWarSlapCooldown(
   state: EgyptianWarState,
@@ -770,13 +778,18 @@ export function checkEgyptianWarSlapCooldown(
 ): EgyptianWarSlapCooldownStatus {
   const player = state.players.find((candidate) => candidate.id === playerId);
   const cooldownTarget = player?.slapCooldownUntilCardPlayCount;
-  if (!player || cooldownTarget == null) return "none";
+  if (!player || cooldownTarget == null) return { status: "none" };
 
   const cardsPlayedCount = state.cardsPlayedCount ?? 0;
-  if (cardsPlayedCount < cooldownTarget) return "waiting";
+  if (cardsPlayedCount < cooldownTarget) {
+    return {
+      status: "waiting",
+      cardPlacementsRemaining: cooldownTarget - cardsPlayedCount
+    };
+  }
 
   player.slapCooldownUntilCardPlayCount = null;
-  return "none";
+  return { status: "none" };
 }
 
 export function applyEgyptianWarAction(
@@ -816,9 +829,11 @@ function applyAction(
 
   if (action === "slap") {
     const slapCooldown = checkEgyptianWarSlapCooldown(state, playerId);
-    if (slapCooldown === "waiting") {
+    if (slapCooldown.status === "waiting") {
+      const remaining = slapCooldown.cardPlacementsRemaining;
       throw new EgyptianWarRuleError(
-        "You must wait until the next card is played before slapping again."
+        `You must wait for ${remaining} more card ` +
+        `${remaining === 1 ? "placement" : "placements"} before slapping again.`
       );
     }
     const faceUpPile = state.pile.slice(state.penaltyPileCardCount);
@@ -828,9 +843,9 @@ function applyAction(
 
     if (!isEgyptianWarPileSlappable(faceUpPile, state.settings)) {
       if (player.cards.length === 0) {
-        startEgyptianWarSlapCooldown(state, playerId);
+        startEgyptianWarSlapCooldown(state, playerId, 3);
         state.activityMessage =
-          `${player.name} slapped too early and must wait until the next card is played before slapping again.`;
+          `${player.name} slapped too early while out and must sit out the next two cards.`;
         return state.activityMessage;
       }
 

@@ -1043,11 +1043,11 @@ test("a challenger never has to answer their own challenge", () => {
   assert.equal(state.winnerId, players[0].id);
 });
 
-test("an eliminated player's false slap waits for another card", () => {
+test("an eliminated player's false slap skips two cards and allows the third", () => {
   const state = makeState(
     [
-      [card("4", "p1-4"), card("5", "p1-5")],
-      [card("6", "p2-6"), card("7", "p2-7")],
+      [card("4", "p1-4"), card("5", "p1-5"), card("8", "p1-8")],
+      [card("6", "p2-6"), card("7", "p2-7"), card("10", "p2-10")],
       []
     ],
     { pile: [card("2", "pile-2"), card("9", "pile-9")] }
@@ -1056,29 +1056,46 @@ test("an eliminated player's false slap waits for another card", () => {
   const version = state.pileVersion;
 
   const message = applyEgyptianWarAction(state, players[2].id, "slap");
-  assert.match(message, /wait until the next card is played/i);
+  assert.match(message, /sit out the next two cards/i);
   assert.equal(state.players[2].cards.length, 0);
-  assert.equal(state.players[2].slapCooldownUntilCardPlayCount, 1);
+  assert.equal(state.players[2].slapCooldownUntilCardPlayCount, 3);
   assert.equal(state.pile.length, 2);
   assert.equal(state.pileVersion, version);
   assert.throws(
     () => applyEgyptianWarAction(state, players[2].id, "slap"),
-    /wait until the next card is played/i
+    /3 more card placements/i
   );
+
+  applyEgyptianWarAction(state, players[0].id, "play-card");
+  assert.throws(
+    () => applyEgyptianWarAction(state, players[2].id, "slap"),
+    /2 more card placements/i
+  );
+
+  applyEgyptianWarAction(state, players[1].id, "play-card");
+  assert.throws(
+    () => applyEgyptianWarAction(state, players[2].id, "slap"),
+    /1 more card placement/i
+  );
+
+  applyEgyptianWarAction(state, players[0].id, "play-card");
+  const nextAttempt = applyEgyptianWarAction(state, players[2].id, "slap");
+  assert.match(nextAttempt, /sit out the next two cards/i);
+  assert.equal(state.players[2].slapCooldownUntilCardPlayCount, 6);
 });
 
-test("an eliminated player's cooldown clears on the next card and allows reentry", () => {
+test("an eliminated player's cooldown clears on the third card and allows reentry", () => {
   const state = makeState(
     [
-      [card("2", "p1-2"), card("8", "p1-8")],
-      [card("2", "p2-2"), card("9", "p2-9")],
+      [card("2", "p1-2"), card("2", "p1-2b"), card("8", "p1-8")],
+      [card("9", "p2-9"), card("7", "p2-7")],
       []
     ],
     {
       pile: [card("2", "pile-2"), card("3", "pile-3")],
       players: [
-        { ...players[0], cards: [card("2", "p1-2"), card("8", "p1-8")], isEliminated: false },
-        { ...players[1], cards: [card("2", "p2-2"), card("9", "p2-9")], isEliminated: false },
+        { ...players[0], cards: [card("2", "p1-2"), card("2", "p1-2b"), card("8", "p1-8")], isEliminated: false },
+        { ...players[1], cards: [card("9", "p2-9"), card("7", "p2-7")], isEliminated: false },
         { ...players[2], cards: [], isEliminated: true }
       ]
     }
@@ -1087,11 +1104,23 @@ test("an eliminated player's cooldown clears on the next card and allows reentry
   applyEgyptianWarAction(state, players[2].id, "slap");
   applyEgyptianWarAction(state, players[0].id, "play-card");
   assert.equal(state.cardsPlayedCount, 1);
+  assert.throws(
+    () => applyEgyptianWarAction(state, players[2].id, "slap"),
+    /2 more card placements/i
+  );
+
+  applyEgyptianWarAction(state, players[1].id, "play-card");
+  assert.throws(
+    () => applyEgyptianWarAction(state, players[2].id, "slap"),
+    /1 more card placement/i
+  );
+
+  applyEgyptianWarAction(state, players[0].id, "play-card");
 
   applyEgyptianWarAction(state, players[2].id, "slap");
   assert.equal(state.players[2].slapCooldownUntilCardPlayCount, null);
   assert.equal(state.players[2].isEliminated, false);
-  assert.equal(state.players[2].cards.length, 3);
+  assert.equal(state.players[2].cards.length, 5);
   assert.equal(state.pile.length, 0);
 });
 
@@ -1115,7 +1144,7 @@ test("a player who false-slaps away their last card waits only for the next card
   assert.equal(state.players[0].slapCooldownUntilCardPlayCount, 1);
   assert.throws(
     () => applyEgyptianWarAction(state, players[0].id, "slap"),
-    /wait until the next card is played/i
+    /1 more card placement/i
   );
 
   applyEgyptianWarAction(state, players[1].id, "play-card");

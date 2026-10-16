@@ -239,7 +239,7 @@ test("an eliminated player's invalid slap animates once and starts its cooldown"
 
     const result = await session.handleAction("third", { type: "slap" });
     assert.equal(result.success, true);
-    assert.equal(internals(session).state.players[2].slapCooldownUntilCardPlayCount, 1);
+    assert.equal(internals(session).state.players[2].slapCooldownUntilCardPlayCount, 3);
     assert.equal(session.getLifecycleState?.().isBusy, true);
     const slapAnimations = animationEvents(events).filter(
       (event) => event.action === "slap"
@@ -251,7 +251,7 @@ test("an eliminated player's invalid slap animates once and starts its cooldown"
 
     const repeated = await session.handleAction("third", { type: "slap" });
     assert.equal(repeated.success, false);
-    assert.match(repeated.message ?? "", /wait until the next card is played/i);
+    assert.match(repeated.message ?? "", /3 more card placements/i);
     assert.equal(
       animationEvents(events).filter((event) => event.action === "slap").length,
       1
@@ -284,7 +284,7 @@ test("a false slap that eliminates a player blocks only the unchanged card", { t
 
     const repeated = await session.handleAction("host", { type: "slap" });
     assert.equal(repeated.success, false);
-    assert.match(repeated.message ?? "", /wait until the next card is played/i);
+    assert.match(repeated.message ?? "", /1 more card placement/i);
 
     assert.equal((await session.handleAction("guest", { type: "play-card" })).success, true);
     assert.equal((await session.handleAction("host", { type: "slap" })).success, true);
@@ -296,15 +296,15 @@ test("a false slap that eliminates a player blocks only the unchanged card", { t
   }
 });
 
-test("an eliminated player's cooldown allows their slap on the next played card", { timeout: 15_000 }, async () => {
+test("an eliminated player's cooldown skips two cards and allows a slap on the third", { timeout: 15_000 }, async () => {
   const { session } = makeSession();
 
   try {
     deal(
       session,
       [
-        [card("2", "h-2"), card("8", "h-8")],
-        [card("2", "g-2"), card("9", "g-9")],
+        [card("2", "h-2"), card("2", "h-2b"), card("8", "h-8")],
+        [card("9", "g-9"), card("7", "g-7")],
         []
       ],
       [card("2", "pile-2"), card("3", "pile-3")]
@@ -313,10 +313,24 @@ test("an eliminated player's cooldown allows their slap on the next played card"
 
     const falseSlap = await session.handleAction("third", { type: "slap" });
     assert.equal(falseSlap.success, true);
-    assert.equal(internals(session).state.players[2].slapCooldownUntilCardPlayCount, 1);
+    assert.equal(internals(session).state.players[2].slapCooldownUntilCardPlayCount, 3);
     await waitUntil(() => session.getLifecycleState?.().isBusy === false);
 
-    // Playing a 2 creates a sandwich and clears the eliminated player's cooldown.
+    assert.equal((await session.handleAction("host", { type: "play-card" })).success, true);
+    assert.match(
+      (await session.handleAction("third", { type: "slap" })).message ?? "",
+      /2 more card placements/i
+    );
+    await waitUntil(() => session.getLifecycleState?.().isBusy === false);
+
+    assert.equal((await session.handleAction("guest", { type: "play-card" })).success, true);
+    assert.match(
+      (await session.handleAction("third", { type: "slap" })).message ?? "",
+      /1 more card placement/i
+    );
+    await waitUntil(() => session.getLifecycleState?.().isBusy === false);
+
+    // The host's second 2 creates a sandwich on the third card opportunity.
     assert.equal((await session.handleAction("host", { type: "play-card" })).success, true);
     const slap = await session.handleAction("third", { type: "slap" });
     assert.equal(slap.success, true);

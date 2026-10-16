@@ -36,7 +36,7 @@ export const egyptianWar: GameDefinition = {
   id: "egyptian-war",
   name: "Egyptian War",
   description:
-    "Play cards into a central pile, survive face-card challenges, and race to slap enabled patterns. False slaps carry penalties, and eliminated players must wait for another card before slapping again. The last player holding all the cards wins.",
+    "Play cards into a central pile, survive face-card challenges, and race to slap enabled patterns. False slaps carry penalties, including a two-card wait for eliminated players. The last player holding all the cards wins.",
   isPlayable: true,
   chatEnabled: true,
 
@@ -74,10 +74,10 @@ export const egyptianWar: GameDefinition = {
     "If the challenged player uses every attempt without revealing a face card, Ace, or Joker, the player who most recently played a challenge card wins the pile unless the final card creates a valid slap combination.",
     "When the final failed challenge card creates a valid slap combination, players get a short window of about four seconds to slap; if nobody slaps, the most recent challenge card player wins the pile.",
     "If the challenged player runs out of cards before completing their attempts, the next player with cards inherits the challenge with the remaining attempts.",
-    "A player who runs out of cards is skipped until they reenter by winning a valid slap. An eliminated player who false-slaps cannot slap the unchanged pile again, but may slap as soon as the next card is played.",
+    "A player who runs out of cards is skipped until they reenter by winning a valid slap. They may try once on the next played card. If an eliminated player false-slaps, they skip the next two played cards and may try again on the third.",
     "A player who wins the pile places all of its cards at the bottom of their deck without shuffling and begins the next pile.",
     "When a valid slap combination appears, the first player to slap wins the central pile.",
-    "Slapping without a valid combination forfeits the configured number of cards face down to the bottom of the pile, or all remaining cards if fewer remain. Penalty cards do not create slap combinations. A player with no cards forfeits no cards for a false slap and must wait for another card before trying again.",
+    "Slapping without a valid combination forfeits the configured number of cards face down to the bottom of the pile, or all remaining cards if fewer remain. Penalty cards do not create slap combinations. A player with no cards forfeits no cards for a false slap, skips the next two played cards, and may try again on the third.",
     "When only one player still has cards, that player wins unless the current face-up pile has a valid slap that allows an eliminated player to reenter.",
     "If several players slap at nearly the same moment, the pile goes to one of them by weighted chance that favors the earlier slap. The others forfeit nothing.",
     "The winner is the player who collects every card."
@@ -148,7 +148,7 @@ export const egyptianWar: GameDefinition = {
       key: "falseSlapPenaltyCards",
       label: "False Slap Penalty",
       description:
-        "Cards forfeited to the bottom of the pile for an invalid slap. An eliminated player forfeits no cards and must wait for another card before slapping again.",
+        "Cards forfeited to the bottom of the pile for an invalid slap. An eliminated player forfeits no cards, skips the next two played cards, and may slap again on the third.",
       defaultValue: 2,
       options: [1, 2, 3],
       unit: "card"
@@ -171,7 +171,7 @@ export const egyptianWar: GameDefinition = {
 
 export const egyptianWarManifest: GamePluginManifest = {
   apiVersion: gameHubGameApiVersion,
-  packageVersion: "1.0.1-beta.3",
+  packageVersion: "1.0.1-beta.4",
   definition: egyptianWar,
   client: {
     delivery: "embedded",

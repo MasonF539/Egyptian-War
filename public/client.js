@@ -129,7 +129,7 @@ function renderEgyptianWarSlapRules(settings) {
 
   const eliminatedCooldownItem = document.createElement("li");
   eliminatedCooldownItem.textContent =
-    "Eliminated player false slap: wait for another card before slapping again.";
+    "False slap while out: skip two cards, then slap again on the third.";
   egyptianWarSlapRulesList.appendChild(eliminatedCooldownItem);
 }
 

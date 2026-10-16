@@ -54,8 +54,9 @@ descending rank sequence, including Ace-low and Ace-high sequences. The
 an Ace counts as one. An active player who false-slaps forfeits the configured
 number of cards, up to the number they hold. A false slap by an eliminated
 player, or one that forfeits a player's last card, prevents another slap on the
-unchanged pile. The cooldown clears when the next card is played, allowing that
-new card to be slapped and the eliminated player to re-enter immediately.
+unchanged pile. A newly eliminated player may try once on the next played card.
+If an eliminated player false-slaps, they must skip the next two played cards
+and may try again when the third card is placed.
 Invalid reentry attempts use the same visible one-hand slap animation as other
 false slaps; additional attempts during the cooldown do not create extra hands.
 
