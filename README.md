@@ -40,7 +40,8 @@ failed challenge. Its numeric countdown stays fixed at the right edge inside
 the full-width timer track while the yellow fill passes beneath it, and the
 complete timer scales with the action controls on narrow screens.
 
-The package consumes an exact `@masonf539/game-sdk` release. Once both packages
+The package declares `@masonf539/game-sdk@^1.0.0` as a peer dependency so GameHub
+and its games share one SDK installation. Once both packages
 are published, GameHub installs an exact Egyptian War version and enables it
 through `gamehub.config.json`. GameHub's `npm run verify:packages` command
 currently verifies that both packed artifacts work without monorepo source.
@@ -64,6 +65,6 @@ false slaps; additional attempts during the cooldown do not create extra hands.
 
 The repository includes its own README, license, TypeScript settings, tests,
 public assets, package metadata, and ignore rules. Its only GameHub code
-dependency is the exact `@masonf539/game-sdk` version declared in `package.json`.
+dependency is the compatible `@masonf539/game-sdk` peer range in `package.json`.
 A lockfile will be generated after that SDK version is published so it records
 the registry artifact rather than the former monorepo workspace link.

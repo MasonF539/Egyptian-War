@@ -92,7 +92,6 @@
             aria-hidden="true"></div>
           <div class="egyptian-war-felt">
             <div class="egyptian-war-table-info">
-              <p id="egyptian-war-turn" class="egyptian-war-turn-inline" aria-live="polite"></p>
               <p class="egyptian-war-pile-label mb-2">
                 Central pile: <span id="egyptian-war-pile-count">0 cards</span>
               </p>
@@ -111,6 +110,7 @@
         </div>
 
         <div class="egyptian-war-action-area">
+          <p id="egyptian-war-turn" class="egyptian-war-turn-inline" aria-live="polite" aria-atomic="true"></p>
           <div id="egyptian-war-turn-timer" class="egyptian-war-turn-timer mb-2 is-hidden"
             aria-hidden="true">
             <div class="progress flex-grow-1" role="progressbar" aria-label="Time remaining for this turn"

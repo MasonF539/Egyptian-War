@@ -146,7 +146,7 @@ test("reopening puts focus on the selected tab", () => {
   }
 });
 
-test("a new game starts at medium again", () => {
+test("a new game remembers minimized state and the previous open size", () => {
   const view = mountClient();
 
   try {
@@ -166,8 +166,10 @@ test("a new game starts at medium again", () => {
       requestExit() {},
       notify() {}
     });
+    assert.equal(view.isClosed(), true);
+    view.bubble.click();
     assert.equal(view.isOpen(), true);
-    assert.equal(view.isLarge(), false);
+    assert.equal(view.isLarge(), true);
   } finally {
     view.close();
   }

@@ -45,6 +45,45 @@ let egyptianWarSidePanelMode = "medium";
 let egyptianWarSidePanelReopenMode = "medium";
 let egyptianWarUnreadChatCount = 0;
 
+const layoutStorageKey = "egyptian-war:layout";
+function readLayoutPreferences() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(layoutStorageKey) ?? "{}");
+    return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLayoutPreferences() {
+  try {
+    localStorage.setItem(layoutStorageKey, JSON.stringify({
+      panelMode: egyptianWarSidePanelMode,
+      reopenMode: egyptianWarSidePanelReopenMode,
+      rulesExpanded: toggleSlapRulesButton.getAttribute("aria-expanded") === "true"
+    }));
+  } catch {
+    // Layout controls still work when storage is unavailable.
+  }
+}
+
+function setSlapRulesExpanded(expanded) {
+  toggleSlapRulesButton.setAttribute("aria-expanded", String(expanded));
+  toggleSlapRulesButton.textContent = expanded ? "Hide" : "Show";
+  egyptianWarSlapRulesList.hidden = !expanded;
+  egyptianWarSlapRulesList.parentElement.classList.toggle("is-collapsed", !expanded);
+}
+
+function restoreLayoutPreferences() {
+  const saved = readLayoutPreferences();
+  const narrow = globalScope.matchMedia?.("(max-width: 575.98px)").matches === true;
+  egyptianWarSidePanelReopenMode = saved.reopenMode === "large" ? "large" : "medium";
+  setSlapRulesExpanded(typeof saved.rulesExpanded === "boolean" ? saved.rulesExpanded : !narrow);
+  const mode = ["closed", "medium", "large"].includes(saved.panelMode)
+    ? saved.panelMode : narrow ? "closed" : "medium";
+  setEgyptianWarSidePanelMode(mode);
+}
+
 let previousEgyptianWarState = null;
 let visibleEgyptianWarCards = [];
 let activeEgyptianWarAnimation = null;
@@ -215,7 +254,9 @@ function showEgyptianWarGame(game) {
   );
   currentSettings = game.settings ?? currentSettings;
   renderEgyptianWarSlapRules(currentSettings);
-  setEgyptianWarSidePanelMode("medium");
+  egyptianWarUnreadChatCount = 0;
+  renderEgyptianWarChatBadge();
+  restoreLayoutPreferences();
   configureEgyptianWarSidePanel(game.chatEnabled === true);
   egyptianWarChatMessages.replaceChildren();
 }
@@ -290,6 +331,7 @@ function setEgyptianWarSidePanelMode(mode) {
     return line;
   });
   toggleGameSidePanelButton.replaceChildren(...chevrons);
+  saveLayoutPreferences();
 }
 
 function setEgyptianWarSidePanelExpanded(isExpanded) {
@@ -840,7 +882,9 @@ function renderEgyptianWarState(state) {
     : winner
       ? `${winner.name} wins!`
       : currentPlayer
-        ? `${currentPlayer.name}'s turn`
+        ? currentPlayer.id === currentContext.memberId
+          ? "It's your turn"
+          : `${currentPlayer.name}'s turn`
         : "Game complete";
 
   if (state.challenge) {
@@ -1110,6 +1154,7 @@ function renderChatMessage(chatMessage) {
 
   if (
     egyptianWarSidePanelMode === "closed" &&
+    !chatMessage.isHistory &&
     chatMessage.senderId !== currentContext?.memberId
   ) {
     egyptianWarUnreadChatCount += 1;
@@ -1119,13 +1164,8 @@ function renderChatMessage(chatMessage) {
 
 toggleSlapRulesButton.addEventListener("click", () => {
   const expanded = toggleSlapRulesButton.getAttribute("aria-expanded") !== "true";
-  toggleSlapRulesButton.setAttribute("aria-expanded", String(expanded));
-  toggleSlapRulesButton.textContent = expanded ? "Hide" : "Show";
-  egyptianWarSlapRulesList.hidden = !expanded;
-  egyptianWarSlapRulesList.parentElement.classList.toggle(
-    "is-collapsed",
-    !expanded
-  );
+  setSlapRulesExpanded(expanded);
+  saveLayoutPreferences();
 });
 async function playEgyptianWarCard() {
   if (egyptianWarPlayCardButton.disabled) return;
