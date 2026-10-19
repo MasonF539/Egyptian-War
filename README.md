@@ -24,6 +24,10 @@ shared audio service.
 The game board lives in `public/template.html`, and its presentation lives in
 `public/style.css`. GameHub injects the fragment into a package-specific root;
 the browser controller scopes its element lookups to that root.
+The table adapts to the space above the action controls: a taller board uses a
+rounded rectangular table with a continuous wooden rail and no pockets; a wider
+board keeps the oval table. Player seats follow the selected shape, while the
+turn label, timer, and buttons stay below the board.
 During active play, the stylesheet fixes the board to the available viewport,
 accounts for mobile safe areas, and keeps its compact Pause/connection row
 below GameHub's Settings shortcut. Full Screen and confirmed Exit/Leave

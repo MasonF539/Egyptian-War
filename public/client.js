@@ -974,8 +974,15 @@ function renderEgyptianWarState(state) {
       animation?.winnerId === player.id &&
       !isWaitingForSlapWinnerReveal
     );
-    seat.style.left = `${50 + Math.cos(angle) * 40}%`;
-    seat.style.top = `${50 + Math.sin(angle) * 37}%`;
+    const directionX = Math.cos(angle);
+    const directionY = Math.sin(angle);
+    // Project the same clockwise player order onto straight rectangular rails.
+    // Both positions are available to CSS, so resizing needs no state update.
+    const rectangleScale = Math.max(Math.abs(directionX), Math.abs(directionY));
+    seat.style.setProperty("--oval-seat-x", `${50 + directionX * 40}%`);
+    seat.style.setProperty("--oval-seat-y", `${50 + directionY * 37}%`);
+    seat.style.setProperty("--rectangle-seat-x", `${50 + directionX / rectangleScale * 32}%`);
+    seat.style.setProperty("--rectangle-seat-y", `${49 + directionY / rectangleScale * 41}%`);
 
     const avatar = document.createElement("span");
     avatar.className = "player-avatar";
