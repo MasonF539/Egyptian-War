@@ -38,6 +38,16 @@ Egyptian War declares `play-card` and `slap` input actions for GameHub's
 package-aware Keybinds tab. Their defaults are E and Space respectively, and
 the game subscribes through the shared input service so remapping remains a
 personal GameHub preference.
+Buttons show the current bindings for keyboard users. GameHub's Game settings
+also offer personal card styles and table colors with previews. Animation timing
+is shared, with support for the device's reduced-motion accessibility preference.
+
+By default, a disconnected player pauses the game for up to 60 seconds before
+automatic play takes over their turns. The host can resume early or keep the
+game manually paused, and a returning player retains their hand and control.
+The lobby settings can change this waiting time or disable takeover. Multiple
+offline players each receive their own waiting period. GameHub's host recovery
+timeout still closes rooms whose host does not return.
 The package's public state also states whether the current player may legally
 play a card, keeping the action disabled during the final slap window after a
 failed challenge. Its numeric countdown stays fixed at the right edge inside

@@ -90,7 +90,7 @@
         <div id="egyptian-war-arena" class="egyptian-war-arena">
           <div id="egyptian-war-animation-layer" class="egyptian-war-animation-layer"
             aria-hidden="true"></div>
-          <div class="egyptian-war-felt">
+          <div class="egyptian-war-felt"></div>
             <div class="egyptian-war-table-info">
               <p class="egyptian-war-pile-label mb-2">
                 Central pile: <span id="egyptian-war-pile-count">0 cards</span>
@@ -99,10 +99,11 @@
                 aria-label="Central card pile">
                 <p id="egyptian-war-top-card" class="egyptian-war-empty-pile">No card played yet</p>
               </div>
-              <p id="egyptian-war-challenge" class="egyptian-war-challenge mb-1"></p>
-              <p id="egyptian-war-message" class="egyptian-war-message mb-0" aria-live="polite"></p>
+              <div class="egyptian-war-table-updates" tabindex="0" role="region" aria-label="Challenge and game activity">
+                <p id="egyptian-war-challenge" class="egyptian-war-challenge mb-1"></p>
+                <p id="egyptian-war-message" class="egyptian-war-message mb-0" aria-live="polite"></p>
+              </div>
             </div>
-          </div>
           <div id="egyptian-war-players" class="egyptian-war-seats"
             aria-label="Players around the table"></div>
           <div id="egyptian-war-victory" class="egyptian-war-victory" role="status"
@@ -133,12 +134,14 @@
           <div class="row g-2 egyptian-war-controls">
             <div class="col">
               <button id="egyptian-war-play-card" class="btn btn-success btn-lg w-100"
-                type="button" disabled>Play a Card</button>
+                type="button" disabled><span class="egyptian-war-action-label">Play a Card</span>
+                <kbd id="egyptian-war-play-key" class="egyptian-war-key-hint" hidden></kbd></button>
             </div>
             <div class="col">
               <button id="egyptian-war-slap" class="btn btn-warning btn-lg w-100" type="button" disabled>
                 <span class="egyptian-war-action-label">Slap!</span>
-                <span class="egyptian-war-action-subtitle">
+                <kbd id="egyptian-war-slap-key" class="egyptian-war-key-hint" hidden></kbd>
+                <span id="egyptian-war-slap-subtitle" class="egyptian-war-action-subtitle">
                   <span class="egyptian-war-action-fire" aria-hidden="true">&#x1F525;</span>
                   Bring the pain
                   <span class="egyptian-war-action-fire" aria-hidden="true">&#x1F525;</span>

@@ -93,11 +93,19 @@ class EgyptianWarSession implements GameSession {
   private disconnectPausedPlayerId: string | null = null;
   private wasPausedBeforeDisconnect = false;
   private disposed = false;
+  private readonly offlineAutoPlay: boolean;
+  private readonly offlineGraceMs: number;
+  private readonly offlineTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly autoPlayingMembers = new Set<string>();
 
   constructor(
     private readonly context: GameSessionContext,
     settings: Readonly<Record<string, GameSettingValue>>
   ) {
+    this.offlineAutoPlay = settings.offlineAutoPlay !== false;
+    const grace = settings.offlineGraceSeconds;
+    this.offlineGraceMs = (typeof grace === "number" && Number.isFinite(grace)
+      ? Math.max(15, Math.min(300, grace)) : 60) * 1000;
     const engineSettings: EgyptianWarSettings = {
       deckCount: typeof settings.deckCount === "number" ? settings.deckCount : 1,
       includeJokers: settings.includeJokers === true,
@@ -181,7 +189,10 @@ class EgyptianWarSession implements GameSession {
         message: "Wait for the accepted slap decision before pausing."
       };
     }
-    if (this.isPaused) return { success: true };
+    if (this.isPaused) {
+      if (this.disconnectPausedPlayerId !== null) this.wasPausedBeforeDisconnect = true;
+      return { success: true };
+    }
     this.suspendTurnTimer();
     if (this.disconnectPausedPlayerId !== null) {
       this.wasPausedBeforeDisconnect = true;
@@ -206,6 +217,33 @@ class EgyptianWarSession implements GameSession {
 
   memberDisconnected(memberId: string): void {
     if (this.state.status !== "playing") return;
+    if (this.offlineAutoPlay && !this.offlineTimers.has(memberId)) {
+      this.offlineTimers.set(memberId, setTimeout(() => {
+        this.offlineTimers.delete(memberId);
+        if (this.disposed || this.state.status !== "playing") return;
+        this.autoPlayingMembers.add(memberId);
+        const waiting = this.context.members().find((member) =>
+          member.role === "player" && !member.isConnected && !this.autoPlayingMembers.has(member.id));
+        this.disconnectPausedPlayerId = waiting?.id ?? null;
+        if (!waiting) {
+          this.isPaused = this.wasPausedBeforeDisconnect;
+          this.wasPausedBeforeDisconnect = false;
+          if (!this.isPaused) {
+            const currentId = this.state.players[this.state.currentPlayerIndex]?.id;
+            if (this.turnTimer === null || (currentId && this.autoPlayingMembers.has(currentId))) {
+              this.startTurnTimer(this.getTurnTimeRemainingMs() ?? this.turnDurationMs);
+            }
+          }
+        }
+        this.state.activityMessage = waiting
+          ? `Waiting for ${waiting.name} to reconnect before continuing.`
+          : this.isPaused
+            ? "Offline auto-play is ready. The host has kept the game paused."
+            : "Offline players' turns will be played automatically.";
+        this.emitPauseChanged();
+        this.context.broadcastState();
+      }, this.offlineGraceMs));
+    }
     this.suspendTurnTimer();
     if (this.disconnectPausedPlayerId === null) {
       this.wasPausedBeforeDisconnect = this.isPaused;
@@ -217,12 +255,16 @@ class EgyptianWarSession implements GameSession {
     this.animationId += 1;
     const player = this.state.players.find((candidate) => candidate.id === memberId);
     this.state.activityMessage =
-      `${player?.name ?? "A player"} disconnected. The game is paused until they return.`;
+      this.offlineAutoPlay
+        ? `${player?.name ?? "A player"} disconnected. Their turns will auto-play after ${this.offlineGraceMs / 1000} seconds. The host can resume now or keep the game paused.`
+        : `${player?.name ?? "A player"} disconnected. The game is paused until they return.`;
+    this.context.emitEvent({ type: "notification", payload: { message: this.state.activityMessage } });
     this.emitPauseChanged();
     this.context.broadcastState();
   }
 
   memberReconnected(memberId: string, previousMemberId = memberId): void {
+    this.clearOfflineMember(previousMemberId);
     if (previousMemberId !== memberId) {
       this.remapMemberId(previousMemberId, memberId);
     }
@@ -232,7 +274,7 @@ class EgyptianWarSession implements GameSession {
         (member) =>
           member.role === "player" &&
           member.id !== memberId &&
-          !member.isConnected
+          !member.isConnected && !this.autoPlayingMembers.has(member.id)
       );
       this.disconnectPausedPlayerId = disconnected?.id ?? null;
       if (this.disconnectPausedPlayerId === null) {
@@ -293,12 +335,13 @@ class EgyptianWarSession implements GameSession {
       };
     }
     if (this.reconnectGracePlayerId === memberId) this.reconnectGracePlayerId = null;
+    this.clearOfflineMember(memberId);
     if (this.disconnectPausedPlayerId === memberId) {
       const other = this.context.members().find(
         (candidate) =>
           candidate.role === "player" &&
           candidate.id !== memberId &&
-          !candidate.isConnected
+          !candidate.isConnected && !this.autoPlayingMembers.has(candidate.id)
       );
       this.disconnectPausedPlayerId = other?.id ?? null;
       if (this.disconnectPausedPlayerId === null) {
@@ -324,6 +367,15 @@ class EgyptianWarSession implements GameSession {
     this.disposed = true;
     this.clearTurnTimer();
     this.cancelPendingSlaps();
+    for (const memberId of this.offlineTimers.keys()) this.clearOfflineMember(memberId);
+    this.autoPlayingMembers.clear();
+  }
+
+  private clearOfflineMember(memberId: string): void {
+    const timer = this.offlineTimers.get(memberId);
+    if (timer !== undefined) clearTimeout(timer);
+    this.offlineTimers.delete(memberId);
+    this.autoPlayingMembers.delete(memberId);
   }
 
   private emitPauseChanged(): void {
@@ -375,7 +427,9 @@ class EgyptianWarSession implements GameSession {
     }
     const grace = this.reconnectGracePlayerId === currentId ? reconnectTurnGraceMs : 0;
     if (grace > 0) this.reconnectGracePlayerId = null;
-    const delay = Math.max(0, Math.min(duration, remainingMs + grace));
+    const offlineDelay = this.state.pendingPileWinnerId === null && currentId !== null &&
+      this.autoPlayingMembers.has(currentId) ? 1000 : duration;
+    const delay = Math.max(0, Math.min(duration, offlineDelay, remainingMs + grace));
     this.turnTimeRemainingMs = delay;
     this.turnDeadlineAt = this.context.now() + delay;
     this.turnTimer = setTimeout(() => {
@@ -427,7 +481,7 @@ class EgyptianWarSession implements GameSession {
     if (!resolution || this.disposed || this.state.status !== "playing") return;
     const candidates = [...resolution.candidates.values()];
     if (candidates.length === 0) {
-      if (!this.isPaused) this.startTurnTimer();
+      if (!this.isPaused && this.turnTimer === null) this.startTurnTimer();
       return;
     }
     const winner = selectWeightedSlapWinner(candidates);
@@ -673,6 +727,7 @@ class EgyptianWarSession implements GameSession {
   private finish(): void {
     this.clearTurnTimer();
     this.cancelPendingSlaps();
+    for (const memberId of this.offlineTimers.keys()) this.clearOfflineMember(memberId);
     this.context.finish({
       winnerId: this.state.winnerId,
       reason: this.state.activityMessage
@@ -682,6 +737,9 @@ class EgyptianWarSession implements GameSession {
   private remapMemberId(previousId: string, memberId: string): void {
     const player = this.state.players.find((candidate) => candidate.id === previousId);
     if (player) player.id = memberId;
+    if (this.state.winnerId === previousId) {
+      this.state.winnerId = memberId;
+    }
     if (this.state.challenge?.challengerId === previousId) {
       this.state.challenge.challengerId = memberId;
     }

@@ -115,7 +115,7 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
 }
 
 .egyptian-war-sleep-zs>span:nth-child(2) {
-  font-size: 0.68rem;
+  font-size: clamp(0.35rem, 6.5cqh, 0.68rem);
   transform: translateY(-0.16rem);
 }
 
@@ -366,11 +366,20 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   pointer-events: none;
 }
 
+/* The measured end and side seats bound this central area. */
 .egyptian-war-table-info {
-  position: relative;
+  position: absolute;
   z-index: 1;
-  width: min(66%, 25rem);
-  padding: 0.75rem;
+  left: 50%;
+  top: 22%;
+  bottom: 22%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: min(44%, 25rem);
+  padding: 0;
+  container-type: size;
   text-align: center;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
@@ -380,10 +389,33 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   font-weight: 700;
 }
 
+.egyptian-war-table-info > p,
+.egyptian-war-table-updates > p {
+  flex-shrink: 0;
+  font-size: clamp(0.625rem, min(6cqh, 8cqw), 0.95rem);
+  line-height: 1.3;
+}
+.egyptian-war-table-updates {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  scrollbar-width: thin;
+}
+.egyptian-war-table-updates:focus-visible {
+  outline: 2px solid #ffe08a;
+  outline-offset: -2px;
+}
+.egyptian-war-challenge:empty { display: none; }
+.egyptian-war-table-info .egyptian-war-message { min-height: 0; }
+
 .egyptian-war-pile-stack {
   position: relative;
   width: 100%;
-  height: 13rem;
+  flex: 1 0 min(5.5rem, 55cqh);
+  min-height: min(5.5rem, 55cqh);
+  max-height: 13rem;
+  container-type: size;
   margin: 0 auto 0.35rem;
 }
 
@@ -407,8 +439,9 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   top: 50%;
   left: 50%;
   display: grid;
-  width: var(--egyptian-war-card-width);
-  height: var(--egyptian-war-card-height);
+  width: min(var(--egyptian-war-card-width), 62cqh);
+  height: min(var(--egyptian-war-card-height), 88cqh);
+  container-type: size;
   place-items: center;
   color: #17191d;
   background:
@@ -445,7 +478,7 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   top: 0.25rem;
   left: 0.3rem;
   display: grid;
-  font-size: 1.05rem;
+  font-size: clamp(0.4rem, 12cqh, 1.05rem);
   line-height: 0.95;
   text-align: center;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
@@ -460,7 +493,7 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
 }
 
 .playing-card-center {
-  font-size: clamp(2.55rem, 6vw, 3.75rem);
+  font-size: clamp(0.8rem, 35cqh, 3.75rem);
   line-height: 1;
   filter: drop-shadow(0 0.12rem 0 rgba(0, 0, 0, 0.16));
 }
@@ -518,7 +551,7 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
 }
 
 .playing-card-joker-monogram {
-  font-size: clamp(3.25rem, 7.2vw, 4.75rem);
+  font-size: clamp(1rem, 45cqh, 4.75rem);
   font-style: italic;
   font-weight: 900;
   line-height: 0.82;
@@ -531,7 +564,7 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   margin-top: 0.22rem;
   color: #ad7621;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(0.65rem, 1.7vw, 0.95rem);
+  font-size: clamp(0.35rem, 9cqh, 0.95rem);
   font-weight: 900;
   letter-spacing: 0.08em;
   white-space: nowrap;
@@ -710,13 +743,20 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   position: absolute;
   top: calc(100% + 0.2rem);
   left: 50%;
-  z-index: 5;
+  width: 100%;
   transform: translateX(-50%);
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 0.35rem;
-  white-space: nowrap;
+  gap: 0.2rem;
   pointer-events: auto;
+}
+
+
+.egyptian-war-seat[data-table-half="bottom"] .egyptian-war-disconnected-actions {
+  top: auto;
+  bottom: calc(100% + 0.2rem);
 }
 
 .egyptian-war-seat .player-avatar {
@@ -1408,15 +1448,6 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
     min-height: 0;
   }
 
-  .egyptian-war-table-info {
-    width: 76%;
-    padding: 0.35rem;
-  }
-
-  .egyptian-war-pile-stack {
-    height: 10.875rem;
-  }
-
   .egyptian-war-seat {
     width: 7rem;
     gap: 0.35rem;
@@ -1515,15 +1546,6 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
     border-radius: clamp(0.35rem, 1.5cqw, 0.9rem);
   }
 
-  .egyptian-war-table-info {
-    width: 52%;
-    padding-inline: 0.35rem;
-  }
-
-  .egyptian-war-felt .egyptian-war-pile-stack {
-    height: clamp(7.75rem, 32cqh, 13rem);
-  }
-
   .egyptian-war-challenge:empty {
     display: none;
   }
@@ -1579,8 +1601,81 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   .egyptian-war-side-panel {
     height: min(10rem, 24vh);
   }
+}
 
-  .egyptian-war-pile-stack {
-    height: 8.25rem;
+/* These settings affect presentation only, never server turn or slap timing. */
+[data-table-color="blue"] .egyptian-war-felt {
+  background: radial-gradient(ellipse at 50% 35%, #398ba5, #18566e 65%, #103849);
+}
+[data-table-color="burgundy"] .egyptian-war-felt {
+  background: radial-gradient(ellipse at 50% 35%, #a74b65, #702e43 65%, #481e2b);
+}
+[data-card-style="modern"] .playing-card {
+  color: #123c52;
+  background: #e0fbff;
+  border: 3px solid #123c52;
+  border-radius: .25rem;
+  font-family: system-ui, sans-serif;
+  box-shadow: .2rem .2rem 0 #123c52, 0 .65rem 1rem rgba(0,0,0,.4);
+}
+[data-card-style="modern"] .playing-card::before {
+  inset: 0 auto 0 0;
+  width: 12%;
+  background: #087f98;
+  border: 0;
+  border-radius: 0;
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+[data-card-style="modern"] .playing-card.is-red { color: #bb246b; }
+[data-card-style="modern"] .playing-card-corner { text-shadow: none; font-weight: 900; }
+[data-card-style="modern"] .playing-card-corner:not(.is-opposite) { left: .2rem; }
+[data-card-style="modern"] .playing-card.is-face-card .playing-card-center {
+  background: #b4edf7;
+  border: 2px solid #087f98;
+  border-radius: .15rem;
+}
+[data-card-style="midnight"] .playing-card {
+  background: linear-gradient(145deg, #263247, #111827);
+  color: #f4e4ba;
+  border-color: #c9ab69;
+}
+[data-card-style="midnight"] .playing-card.is-red { color: #ff8c9d; }
+[data-card-style="midnight"] .playing-card-corner { text-shadow: none; }
+[data-card-style="midnight"] .playing-card.is-joker {
+  border-color: #f5cf76;
+  box-shadow: inset 0 0 0 1px rgba(245, 207, 118, .3), 0 .18rem 0 #675027, 0 .75rem 1rem rgba(0, 0, 0, .48);
+}
+[data-card-style="midnight"] .playing-card.is-joker::before {
+  border-color: rgba(245, 207, 118, .65);
+}
+[data-card-style="midnight"] .playing-card.is-joker .playing-card-corner { color: #ffe5a3; }
+[data-card-style="midnight"] .playing-card-joker-ornament { color: #f5cf76; }
+.egyptian-war-key-hint { display: block; width: fit-content; margin: .15rem auto 0; padding: .05rem .4rem; font: 600 .65em system-ui, sans-serif; color: inherit; background: rgba(0,0,0,.18); border: 1px solid currentColor; border-radius: .25rem; }
+.egyptian-war-key-hint[hidden], .egyptian-war-action-subtitle[hidden] { display: none; }
+#egyptian-war-play-card .egyptian-war-action-label { white-space: normal; line-height: 1.1; }
+
+
+@container egyptian-war-board (max-height: 220px) {
+  .egyptian-war-seat {
+    width: clamp(6rem, 16cqw, 8rem);
+    padding: 0.2rem 0.4rem;
+    gap: 0.25rem;
+  }
+  .egyptian-war-seat .player-avatar {
+    width: 1.4rem;
+    height: 1.4rem;
+    flex-basis: 1.4rem;
+    font-size: 1rem;
+  }
+  .egyptian-war-seat .player-name { font-size: 0.6rem; padding-bottom: 0; line-height: 1.1; }
+  .egyptian-war-seat-details { gap: 0.1rem; }
+  .egyptian-war-seat .egyptian-war-card-count { font-size: 0.55rem; line-height: 1.1; }
+  .egyptian-war-table-info > p,
+  .egyptian-war-table-updates > p { font-size: 0.55rem; line-height: 1.1; }
+  .egyptian-war-table-info .egyptian-war-pile-label { margin-bottom: 0.1rem !important; }
+  .egyptian-war-disconnected-actions .badge { font-size: 0.5rem; }
+  .egyptian-war-disconnected-actions .btn {
+    padding: 0.1rem 0.25rem;
+    font-size: 0.55rem;
   }
 }

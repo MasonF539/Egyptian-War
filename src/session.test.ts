@@ -57,6 +57,71 @@ function makeSession(playerCount = 3, overrides: Record<string, number | boolean
   return { session, events, members };
 }
 
+test("offline players auto-play after the wait and reconnect into their existing hand", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const { session, members, events } = makeSession(3, { offlineAutoPlay: true, offlineGraceSeconds: 60 });
+  try {
+    const current = internals(session).state.players[internals(session).state.currentPlayerIndex];
+    const member = members.find((member) => member.id === current.id)!;
+    const count = current.cards.length;
+    session.start?.();
+    member.isConnected = false;
+    session.memberDisconnected?.(member.id);
+    assert.equal(session.getLifecycleState().isPaused, true);
+    assert.match(JSON.stringify(events.find((event) => event.type === "notification")), /60 seconds/);
+    t.mock.timers.tick(59_999);
+    assert.equal(current.cards.length, count);
+    t.mock.timers.tick(1);
+    assert.equal(session.getLifecycleState().isPaused, false);
+    t.mock.timers.tick(1000);
+    assert.equal(current.cards.length, count - 1);
+    member.isConnected = true;
+    session.memberReconnected?.(member.id);
+    assert.ok(internals(session).state.players.some((player) => player.id === member.id));
+    assert.equal(current.cards.length, count - 1);
+  } finally { session.dispose(); }
+});
+
+test("offline grace preserves a manual pause and waits for every missing player", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const { session, members } = makeSession(3, { offlineAutoPlay: true });
+  try {
+    members[0]!.isConnected = false;
+    session.memberDisconnected?.(members[0]!.id);
+    t.mock.timers.tick(30_000);
+    members[1]!.isConnected = false;
+    session.memberDisconnected?.(members[1]!.id);
+    t.mock.timers.tick(30_000);
+    assert.equal(session.getLifecycleState().isPaused, true);
+    session.pause?.();
+    t.mock.timers.tick(30_000);
+    assert.equal(session.getLifecycleState().isPaused, true);
+    assert.equal(session.resume?.().success, true);
+    assert.equal(session.getLifecycleState().isPaused, false);
+    assert.equal(session.pause?.().success, true);
+    assert.equal(session.getLifecycleState().isPaused, true);
+  } finally { session.dispose(); }
+});
+
+test("reconnecting cancels offline takeover and disabling it keeps the game paused", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  for (const enabled of [true, false]) {
+    const { session, members } = makeSession(3, { offlineAutoPlay: enabled });
+    try {
+      members[0]!.isConnected = false;
+      session.memberDisconnected?.(members[0]!.id);
+      if (enabled) {
+        t.mock.timers.tick(30_000);
+        members[0]!.isConnected = true;
+        session.memberReconnected?.(members[0]!.id);
+        session.pause?.();
+      }
+      t.mock.timers.tick(120_000);
+      assert.equal(session.getLifecycleState().isPaused, true);
+    } finally { session.dispose(); }
+  }
+});
+
 function deal(session: unknown, hands: Card[][], pile: Card[]): void {
   const state = internals(session).state;
   state.players.forEach((player, index) => {
@@ -400,4 +465,62 @@ test("the final-card slap window is much shorter than a full turn", () => {
   } finally {
     session.dispose();
   }
+});
+
+test("offline takeover does not reset a connected player's running turn after an early resume", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const { session, members } = makeSession(3, { turnTimerSeconds: 15 });
+  try {
+    const state = internals(session).state;
+    const missing = members.find((member) => member.id !== state.players[state.currentPlayerIndex].id)!;
+    session.start?.();
+    missing.isConnected = false;
+    session.memberDisconnected?.(missing.id);
+    t.mock.timers.tick(55_000);
+    session.resume?.();
+    t.mock.timers.tick(4_000);
+    const viewer = { memberId: "host", role: "player" } as const;
+    assert.equal((session.getPublicState(viewer) as PublicEgyptianWarState).turnTimeRemainingMs, 11_000);
+    t.mock.timers.tick(1_000);
+    assert.equal((session.getPublicState(viewer) as PublicEgyptianWarState).turnTimeRemainingMs, 10_000);
+  } finally { session.dispose(); }
+});
+
+test("offline takeover shortens the missing player's running turn after an early resume", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const { session, members } = makeSession(3, { turnTimerSeconds: 15 });
+  try {
+    const state = internals(session).state;
+    const current = state.players[state.currentPlayerIndex];
+    session.start?.();
+    members.find((member) => member.id === current.id)!.isConnected = false;
+    session.memberDisconnected?.(current.id);
+    t.mock.timers.tick(55_000);
+    session.resume?.();
+    t.mock.timers.tick(5_000);
+    const viewer = { memberId: "host", role: "player" } as const;
+    assert.equal((session.getPublicState(viewer) as PublicEgyptianWarState).turnTimeRemainingMs, 1000);
+    const count = current.cards.length;
+    t.mock.timers.tick(1000);
+    assert.equal(current.cards.length, count - 1);
+  } finally { session.dispose(); }
+});
+
+test("a winner reconnecting during the victory animation retains the winner identity", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const { session, members, events } = makeSession(2);
+  try {
+    members[1].isConnected = false;
+    assert.equal(session.memberRemoved?.("guest").success, true);
+    assert.equal(internals(session).state.status, "finished");
+    const animation = events.find((event) => event.type === "animation")?.payload as { durationMs: number };
+    assert.ok(animation.durationMs > 0);
+    members[0].id = "host-new";
+    session.memberReconnected?.("host-new", "host");
+    const state = session.getPublicState({ memberId: "host-new", role: "player" }) as PublicEgyptianWarState;
+    assert.equal(state.winnerId, "host-new");
+    assert.equal(state.players.find((player) => player.id === state.winnerId)?.name, "host");
+    t.mock.timers.tick(animation.durationMs);
+    assert.equal(internals(session).state.winnerId, "host-new");
+  } finally { session.dispose(); }
 });

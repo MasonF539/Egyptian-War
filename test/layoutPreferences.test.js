@@ -7,7 +7,7 @@ const { JSDOM } = require("jsdom");
 const gameDirectory = path.resolve(__dirname, "..");
 const storageKey = "egyptian-war:layout";
 
-function mountClient({ narrow = false, saved, blockedStorage = false } = {}) {
+function mountClient({ narrow = false, saved, blockedStorage = false, input, display } = {}) {
   const dom = new JSDOM(readFileSync(path.join(gameDirectory, "public/template.html"), "utf8"), {
     url: "http://localhost", runScripts: "outside-only"
   });
@@ -21,6 +21,7 @@ function mountClient({ narrow = false, saved, blockedStorage = false } = {}) {
   window.GameHubRegisterGameClientModule = (_id, module) => { gameModule = module; };
   window.eval(readFileSync(path.join(gameDirectory, "public/client.js"), "utf8"));
   const instance = gameModule.mount({
+    root: window.document.body, input, display,
     memberId: "me", isHost: false, role: "player",
     launchData: { settings: {}, chatEnabled: true },
     audio: { setScene() {}, playEffect() {} }
@@ -41,6 +42,41 @@ test("phones start with chat minimized and slap rules collapsed", () => {
     assert.equal(view.el("toggle-slap-rules").getAttribute("aria-expanded"), "false");
     assert.equal(view.el("egyptian-war-slap-rules-list").hidden, true);
   } finally { view.close(); }
+});
+
+test("button hints follow keyboard availability and remapping, while themes remain personal", () => {
+  let keyboard = true;
+  let binding = "E";
+  let bindingChanged;
+  let displayChanged;
+  const preferences = { cardStyle: "midnight", tableColor: "blue" };
+  const view = mountClient({ input: {
+    onAction: () => () => {},
+    hasKeyboard: () => keyboard,
+    getBinding: (action) => action === "slap" ? "Space" : binding,
+    onBindingsChanged: (handler) => { bindingChanged = handler; return () => { bindingChanged = null; }; }
+  }, display: {
+    get: (key) => preferences[key],
+    onChange: (handler) => { displayChanged = handler; return () => { displayChanged = null; }; }
+  } });
+  try {
+    assert.equal(view.el("egyptian-war-play-key").textContent, "E");
+    assert.equal(view.el("egyptian-war-slap-key").textContent, "Space");
+    assert.equal(view.el("egyptian-war-slap-subtitle").hidden, true);
+    binding = "Q";
+    bindingChanged();
+    assert.equal(view.el("egyptian-war-play-key").textContent, "Q");
+    keyboard = false;
+    bindingChanged();
+    assert.equal(view.el("egyptian-war-play-key").hidden, true);
+    assert.equal(view.el("egyptian-war-slap-subtitle").hidden, false);
+    assert.equal(view.window.document.body.dataset.cardStyle, "midnight");
+    preferences.tableColor = "burgundy";
+    displayChanged();
+    assert.equal(view.window.document.body.dataset.tableColor, "burgundy");
+  } finally { view.close(); }
+  assert.equal(bindingChanged, null);
+  assert.equal(displayChanged, null);
 });
 
 test("panel size, minimized state, and rules survive a fresh page", () => {
@@ -125,5 +161,30 @@ test("turn announcements distinguish your turn, another player, pause, and compl
     assert.equal(turn.textContent, "Waiting for Guest to reconnect");
     view.instance.receiveState({ ...state, status: "finished", winnerId: "guest" });
     assert.equal(turn.textContent, "Guest wins!");
+  } finally { view.close(); }
+});
+
+test("player seats keep their DOM identity and focus while counts and connection state change", () => {
+  const view = mountClient();
+  const state = { status: "playing", players: [
+    { id: "me", name: "Me", avatar: "M", isConnected: true, cardCount: 26 },
+    { id: "guest", name: "Guest", avatar: "G", isConnected: true, cardCount: 26 }
+  ], currentPlayerId: "me", recentCards: [], winnerId: null, isPaused: false,
+    isAnimating: false, turnTimerSeconds: 15, turnTimeRemainingMs: 15000,
+    challenge: null, pileCardCount: 0, hasFaceUpCards: false, activityMessage: "", canPlayCard: true };
+  try {
+    view.instance.receiveState(state);
+    const seat = view.el("egyptian-war-players").firstElementChild;
+    const name = seat.querySelector(".player-name");
+    name.tabIndex = 0; name.focus();
+    view.instance.receiveState({ ...state, players: [{ ...state.players[0], cardCount: 25, isConnected: false }, state.players[1]] });
+    assert.equal(view.el("egyptian-war-players").firstElementChild, seat);
+    assert.equal(view.window.document.activeElement, name);
+    assert.equal(seat.querySelector(".egyptian-war-card-count").textContent, "25 cards");
+    assert.ok(seat.querySelector(".egyptian-war-disconnected-actions"));
+    view.instance.receiveState(state);
+    assert.equal(seat.querySelector(".egyptian-war-disconnected-actions"), null);
+    view.instance.receiveState({ ...state, players: [state.players[1]] });
+    assert.equal(seat.isConnected, false);
   } finally { view.close(); }
 });

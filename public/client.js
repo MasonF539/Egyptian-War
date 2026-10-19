@@ -261,7 +261,47 @@ function showEgyptianWarGame(game) {
   egyptianWarChatMessages.replaceChildren();
 }
 
+let tableLayoutObserver = null;
+
+function fitEgyptianWarTableContent() {
+  const arena = egyptianWarArena;
+  const info = findEgyptianWarElement(".egyptian-war-table-info");
+  if (!arena || !info) return;
+  const bounds = arena.getBoundingClientRect();
+  const seats = [...egyptianWarPlayers.children].map((seat) => {
+    const box = seat.getBoundingClientRect();
+    const actions = seat.querySelector(".egyptian-war-disconnected-actions")?.getBoundingClientRect();
+    return actions ? {
+      left: Math.min(box.left, actions.left), right: Math.max(box.right, actions.right),
+      top: Math.min(box.top, actions.top), bottom: Math.max(box.bottom, actions.bottom)
+    } : box;
+  });
+  const centerX = bounds.left + bounds.width / 2;
+  let halfWidth = Math.min(bounds.width * 0.22, 200);
+  for (const box of seats) {
+    const offset = (box.left + box.right) / 2 - centerX;
+    if (Math.abs(offset) < bounds.width * 0.24) continue;
+    halfWidth = Math.min(halfWidth, offset < 0 ? centerX - box.right - 8 : box.left - centerX - 8);
+  }
+  halfWidth = Math.max(40, halfWidth);
+  info.style.width = `${halfWidth * 2}px`;
+  let top = 8, bottom = 8;
+  for (const box of seats) {
+    if (box.right <= centerX - halfWidth || box.left >= centerX + halfWidth) continue;
+    if ((box.top + box.bottom) / 2 < bounds.top + bounds.height / 2) {
+      top = Math.max(top, box.bottom - bounds.top + 8);
+    } else {
+      bottom = Math.max(bottom, bounds.bottom - box.top + 8);
+    }
+  }
+  info.style.top = `${top}px`;
+  info.style.bottom = `${bottom}px`;
+}
+
 function destroyEgyptianWarGame() {
+  tableLayoutObserver?.disconnect();
+  tableLayoutObserver = null;
+  egyptianWarArena.removeEventListener("transitionend", fitEgyptianWarTableContent);
   clearTimeout(egyptianWarAnimationTimeout);
   clearTimeout(egyptianWarTransferTimeout);
   clearTimeout(egyptianWarWinnerRevealTimeout);
@@ -398,7 +438,8 @@ function createEgyptianWarCard(card, offset = 0) {
     spades: "♠"
   };
   const rankLabel = rankLabels[card.rank] ?? card.rank;
-  const suitSymbol = card.suit === null ? "★" : suitSymbols[card.suit];
+  // Request a text glyph so the Modern font cannot turn suits into emoji.
+  const suitSymbol = (card.suit === null ? "★" : suitSymbols[card.suit]) + "\uFE0E";
   const description = card.suit === null
     ? "Joker"
     : `${rankLabel} of ${card.suit}`;
@@ -957,14 +998,24 @@ function renderEgyptianWarState(state) {
     }
   }
 
-  egyptianWarPlayers.replaceChildren();
+  const existingSeats = new Map([...egyptianWarPlayers.children].map((seat) => [seat.dataset.playerId, seat]));
+  const playerIds = new Set(state.players.map((player) => player.id));
+  for (const [id, seat] of existingSeats) {
+    if (!playerIds.has(id)) {
+      tableLayoutObserver?.unobserve(seat);
+      const actions = seat.querySelector(".egyptian-war-disconnected-actions");
+      if (actions) tableLayoutObserver?.unobserve(actions);
+      seat.remove();
+    }
+  }
 
   const playerCount = state.players.length;
 
   state.players.forEach((player, index) => {
     const angle = -Math.PI / 2 + (2 * Math.PI * index) / playerCount;
-    const seat = document.createElement("div");
-    seat.className = "egyptian-war-seat";
+    const seat = existingSeats.get(player.id) ?? document.createElement("div");
+    const isNewSeat = !existingSeats.has(player.id);
+    if (isNewSeat) seat.className = "egyptian-war-seat";
     seat.dataset.playerId = player.id;
     seat.classList.toggle("is-current", player.isCurrentPlayer);
     seat.classList.toggle("is-eliminated", player.isEliminated);
@@ -976,6 +1027,7 @@ function renderEgyptianWarState(state) {
     );
     const directionX = Math.cos(angle);
     const directionY = Math.sin(angle);
+    seat.dataset.tableHalf = directionY > 0 ? "bottom" : "top";
     // Project the same clockwise player order onto straight rectangular rails.
     // Both positions are available to CSS, so resizing needs no state update.
     const rectangleScale = Math.max(Math.abs(directionX), Math.abs(directionY));
@@ -984,54 +1036,44 @@ function renderEgyptianWarState(state) {
     seat.style.setProperty("--rectangle-seat-x", `${50 + directionX / rectangleScale * 32}%`);
     seat.style.setProperty("--rectangle-seat-y", `${49 + directionY / rectangleScale * 41}%`);
 
-    const avatar = document.createElement("span");
-    avatar.className = "player-avatar";
-    avatar.textContent = player.avatar;
-
-    const details = document.createElement("div");
-    details.className = "egyptian-war-seat-details";
-
-    const name = document.createElement("span");
-    name.className = "player-name";
-    name.textContent = player.name;
-
-    const cardCount = document.createElement("span");
-    cardCount.className = "egyptian-war-card-count";
-    cardCount.textContent =
-      `${player.cardCount} ${player.cardCount === 1 ? "card" : "cards"}`;
-    details.append(name, cardCount);
-
-    if (player.isEliminated) {
-      const eliminated = document.createElement("span");
+    if (isNewSeat) {
+      seat.innerHTML = '<span class="player-avatar"></span><div class="egyptian-war-seat-details"><span class="player-name"></span><span class="egyptian-war-card-count"></span></div>';
+    }
+    tableLayoutObserver?.observe(seat);
+    const setText = (selector, value) => {
+      const element = seat.querySelector(selector);
+      if (element.textContent !== value) element.textContent = value;
+    };
+    setText(".player-avatar", player.avatar);
+    setText(".player-name", player.name);
+    setText(".egyptian-war-card-count", `${player.cardCount} ${player.cardCount === 1 ? "card" : "cards"}`);
+    let eliminated = seat.querySelector(".egyptian-war-seat-details .badge");
+    if (player.isEliminated && !eliminated) {
+      eliminated = document.createElement("span");
       eliminated.className = "badge text-bg-secondary";
       eliminated.textContent = "Out";
-      details.appendChild(eliminated);
+      seat.querySelector(".egyptian-war-seat-details").appendChild(eliminated);
+    } else if (!player.isEliminated) eliminated?.remove();
+    let actions = seat.querySelector(".egyptian-war-disconnected-actions");
+    if (player.isConnected && actions) {
+      tableLayoutObserver?.unobserve(actions);
+      actions.remove();
+      actions = null;
     }
-
-    seat.append(avatar, details);
-    if (!player.isConnected) {
-      const disconnectedActions = document.createElement("div");
-      disconnectedActions.className =
-        "egyptian-war-disconnected-actions";
-
-      const disconnectedAlert = document.createElement("span");
-      disconnectedAlert.className = "badge text-bg-warning";
-      disconnectedAlert.textContent = "Disconnected";
-      disconnectedActions.appendChild(disconnectedAlert);
-
-      if (currentContext.isHost) {
-        disconnectedActions.appendChild(
-          createKickPlayerButton(
-            player,
-            "btn btn-outline-danger btn-sm"
-          )
-        );
-      }
-
-      seat.appendChild(disconnectedActions);
+    else if (!player.isConnected && !actions) {
+      actions = document.createElement("div");
+      actions.className = "egyptian-war-disconnected-actions";
+      actions.innerHTML = '<span class="badge text-bg-warning">Disconnected</span>';
+      if (currentContext.isHost) actions.appendChild(createKickPlayerButton(player, "btn btn-outline-danger btn-sm"));
+      seat.appendChild(actions);
     }
-    egyptianWarPlayers.appendChild(seat);
+    if (actions) tableLayoutObserver?.observe(actions);
+    actions?.querySelector("button")?.setAttribute("aria-label", `Kick ${player.name}`);
+    if (egyptianWarPlayers.children[index] !== seat) {
+      egyptianWarPlayers.insertBefore(seat, egyptianWarPlayers.children[index] ?? null);
+    }
   });
+  if (!tableLayoutObserver) fitEgyptianWarTableContent();
 
   egyptianWarPileStack
     .querySelectorAll(".playing-card")
@@ -1212,19 +1254,47 @@ toggleGameSidePanelButton.addEventListener("click", () => {
 minimizeGameSidePanelButton.addEventListener("click", minimizeEgyptianWarSidePanel);
 openGameSidePanelButton.addEventListener("click", reopenEgyptianWarSidePanel);
 
+function updateEgyptianWarKeyHints() {
+  const keyboard = currentContext?.input?.hasKeyboard?.() ?? false;
+  for (const [action, id] of [["play-card", "egyptian-war-play-key"], ["slap", "egyptian-war-slap-key"]]) {
+    const hint = findEgyptianWarElement("#" + id);
+    const binding = currentContext?.input?.getBinding?.(action);
+    hint.hidden = !keyboard || !binding;
+    hint.textContent = binding ?? "";
+  }
+  findEgyptianWarElement("#egyptian-war-slap-subtitle").hidden = keyboard;
+}
+
+function applyEgyptianWarDisplay() {
+  const root = currentContext?.root;
+  if (!root) return;
+  root.dataset.cardStyle = currentContext.display?.get("cardStyle") ?? "classic";
+  root.dataset.tableColor = currentContext.display?.get("tableColor") ?? "green";
+}
+
 const egyptianWarClientModule = {
   mount(context) {
     currentContext = context;
+    if (typeof ResizeObserver === "function") {
+      tableLayoutObserver = new ResizeObserver(fitEgyptianWarTableContent);
+      tableLayoutObserver.observe(egyptianWarArena);
+      egyptianWarArena.addEventListener("transitionend", fitEgyptianWarTableContent);
+    }
     currentSettings = context.launchData.settings ?? {};
     egyptianWarInputUnsubscribers = [
       context.input?.onAction("play-card", playEgyptianWarCard),
-      context.input?.onAction("slap", slapEgyptianWarPile)
+      context.input?.onAction("slap", slapEgyptianWarPile),
+      context.input?.onBindingsChanged?.(updateEgyptianWarKeyHints),
+      context.display?.onChange(applyEgyptianWarDisplay)
     ].filter(Boolean);
+    updateEgyptianWarKeyHints();
+    applyEgyptianWarDisplay();
     showEgyptianWarGame(context.launchData);
     timerInterval = setInterval(renderEgyptianWarTurnTimer, 100);
     return {
       receiveState: renderEgyptianWarState,
       receiveEvent(event) {
+        if (event.type === "notification") context.notify(event.payload?.message ?? "");
         if (event.type === "animation") activeEgyptianWarAnimation = event.payload;
         if (event.type === "pause-changed") {
           const paused = Boolean(event.payload?.isPaused);

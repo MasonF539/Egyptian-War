@@ -32,7 +32,21 @@ export type Card = {
   rank: CardRank;
 };
 
-export const egyptianWar: GameDefinition = {
+// Optional display metadata also works with older SDK declarations.
+const egyptianWarDisplayOptions = [
+    { key: "cardStyle", label: "Card style", defaultValue: "classic", choices: [
+      { value: "classic", label: "Classic", previewPath: "/games/egyptian-war/assets/display/card-classic.svg" },
+      { value: "modern", label: "Modern", previewPath: "/games/egyptian-war/assets/display/card-modern.svg" },
+      { value: "midnight", label: "Midnight", previewPath: "/games/egyptian-war/assets/display/card-midnight.svg" }
+    ] },
+    { key: "tableColor", label: "Table color", defaultValue: "green", choices: [
+      { value: "green", label: "Emerald", previewPath: "/games/egyptian-war/assets/display/table-green.svg" },
+      { value: "blue", label: "Ocean", previewPath: "/games/egyptian-war/assets/display/table-blue.svg" },
+      { value: "burgundy", label: "Burgundy", previewPath: "/games/egyptian-war/assets/display/table-burgundy.svg" }
+    ] }
+  ];
+
+export const egyptianWar: GameDefinition & { displayOptions: typeof egyptianWarDisplayOptions } = {
   id: "egyptian-war",
   name: "Egyptian War",
   description:
@@ -63,6 +77,8 @@ export const egyptianWar: GameDefinition = {
     }
   ],
 
+  displayOptions: egyptianWarDisplayOptions,
+
   rules: [
     "The server shuffles the deck, deals every card face down, and randomly selects the first player.",
     "Players cannot view or shuffle their decks.",
@@ -84,6 +100,24 @@ export const egyptianWar: GameDefinition = {
   ],
 
   settings: [
+    {
+      key: "offlineAutoPlay",
+      label: "Auto-play Offline Players",
+      description: "Pause briefly for reconnection, then automatically play offline players' turns. They can rejoin and take control again.",
+      defaultValue: true
+    },
+    {
+      type: "number",
+      control: "range",
+      key: "offlineGraceSeconds",
+      label: "Offline Waiting Time",
+      description: "Seconds to wait before auto-play takes over when enabled. A manual host pause is preserved.",
+      defaultValue: 60,
+      min: 15,
+      max: 300,
+      step: 5,
+      unit: "second"
+    },
     {
       type: "number",
       key: "deckCount",
