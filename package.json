@@ -1,6 +1,6 @@
 {
   "name": "@masonf539/egyptian-war",
-  "version": "1.0.1-beta.5",
+  "version": "1.0.1-beta.6",
   "description": "Egyptian War game plugin for GameHub.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -42,10 +42,10 @@
   },
   "homepage": "https://github.com/MasonF539/Egyptian-War#readme",
   "peerDependencies": {
-    "@masonf539/game-sdk": "^1.0.0"
+    "@masonf539/game-sdk": "^1.0.0 || ^1.1.0-beta.0"
   },
   "devDependencies": {
-    "@masonf539/game-sdk": "1.0.1",
+    "@masonf539/game-sdk": "1.1.0-beta.0",
     "@types/node": "^26.6.4",
     "jsdom": "^30.1.2",
     "typescript": "^7.0.2"
