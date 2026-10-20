@@ -204,6 +204,7 @@ function queueEgyptianWarSound(effectName, delayMs = 0) {
 }
 
 function renderEgyptianWarTurnTimer() {
+  renderOfflineStatus();
   if (egyptianWarTurnTimer.classList.contains("is-hidden")) {
     return;
   }
@@ -318,22 +319,19 @@ function destroyEgyptianWarGame() {
 }
 
 function showEgyptianWarSidePanel(panel) {
-  const showChat =
-    panel === "chat" && !showGameChatButton.disabled;
-  egyptianWarChat.hidden = !showChat;
-  egyptianWarSpectators.hidden = showChat;
-  showGameChatButton.setAttribute("aria-selected", String(showChat));
-  showGameSpectatorsButton.setAttribute(
-    "aria-selected",
-    String(!showChat)
-  );
-  showGameChatButton.classList.toggle("btn-light", showChat);
-  showGameChatButton.classList.toggle("btn-outline-light", !showChat);
-  showGameSpectatorsButton.classList.toggle("btn-light", !showChat);
-  showGameSpectatorsButton.classList.toggle(
-    "btn-outline-light",
-    showChat
-  );
+  if (panel === "chat" && showGameChatButton.disabled) panel = "spectators";
+  for (const [name, button, content] of [
+    ["chat", showGameChatButton, egyptianWarChat],
+    ["spectators", showGameSpectatorsButton, egyptianWarSpectators],
+    ["scoreboard", findEgyptianWarElement("#show-game-scoreboard"), findEgyptianWarElement("#egyptian-war-scoreboard")]
+  ]) {
+    const active = panel === name;
+    content.hidden = !active;
+    button.setAttribute("aria-selected", String(active));
+    button.tabIndex = active ? 0 : -1;
+    button.classList.toggle("btn-light", active);
+    button.classList.toggle("btn-outline-light", !active);
+  }
 }
 
 function configureEgyptianWarSidePanel(chatEnabled) {
@@ -383,8 +381,8 @@ function renderEgyptianWarChatBadge() {
   egyptianWarChatBadge.hidden = count === 0;
   egyptianWarChatBadge.textContent = count > 9 ? "9+" : String(count);
   const label = count === 0
-    ? "Open chat"
-    : `Open chat, ${count} new ${count === 1 ? "message" : "messages"}`;
+    ? "Open game panel"
+    : `Open game panel, ${count} new ${count === 1 ? "message" : "messages"}`;
   openGameSidePanelButton.setAttribute("aria-label", label);
   openGameSidePanelButton.title = label;
 }
@@ -396,9 +394,7 @@ function minimizeEgyptianWarSidePanel() {
 
 function reopenEgyptianWarSidePanel() {
   setEgyptianWarSidePanelMode(egyptianWarSidePanelReopenMode);
-  const selectedTab = showGameChatButton.getAttribute("aria-selected") === "true"
-    ? showGameChatButton
-    : showGameSpectatorsButton;
+  const selectedTab = findEgyptianWarElement('.egyptian-war-side-tabs [aria-selected="true"]');
   selectedTab.focus();
 }
 
@@ -890,6 +886,10 @@ function animateEgyptianWarOutcome(animation) {
 }
 
 function renderEgyptianWarState(state) {
+  offlinePlayers = state.offlinePlayers ?? [];
+  offlinePaused = state.isPaused;
+  if (Number.isFinite(state.serverNow)) offlineClockOffset = state.serverNow - Date.now();
+  renderOfflineStatus();
   const previousState = previousEgyptianWarState;
   const animation = activeEgyptianWarAnimation;
   const currentPlayer = state.players.find(
@@ -1164,7 +1164,9 @@ function renderEgyptianWarState(state) {
 }
 
 
+let lastSpectators = [];
 function renderSpectators(spectators) {
+  lastSpectators = spectators;
   egyptianWarSpectatorList.replaceChildren();
   for (const spectator of spectators) {
     const item = document.createElement("li");
@@ -1272,6 +1274,52 @@ function applyEgyptianWarDisplay() {
   root.dataset.tableColor = currentContext.display?.get("tableColor") ?? "green";
 }
 
+let offlinePlayers = [];
+let offlinePaused = false;
+let offlineClockOffset = 0;
+let hostRecoveryDeadline = null;
+function renderOfflineStatus() {
+  const now = Date.now() + offlineClockOffset;
+  const seconds = (at) => Math.max(0, Math.ceil((at - now) / 1000));
+  const messages = offlinePlayers.map((member) => `${member.name}: ${member.autoPlaying ? "auto-playing" : member.autoPlayAt ? `auto-play in ${seconds(member.autoPlayAt)}s` : "waiting to reconnect"}`);
+  if (hostRecoveryDeadline) messages.push(`Host handoff in ${seconds(hostRecoveryDeadline)}s`);
+  const text = messages.length ? `${offlinePaused ? "Paused" : "Running"} - ${messages.join("; ")}` : "";
+  const label = findEgyptianWarElement("#egyptian-war-offline-status");
+  if (label.textContent !== text) { label.textContent = text; label.title = text; }
+}
+function renderScoreboard(scores) {
+  const container = findEgyptianWarElement("#egyptian-war-score-table");
+  container.replaceChildren();
+  const table = document.createElement("table"); table.className = "table table-dark table-sm";
+  const header = table.createTHead().insertRow();
+  for (const label of ["Player", ...scores.columns.map((column) => column.key === "slaps" ? "Slaps" : column.label)]) {
+    const cell = document.createElement("th"); cell.scope = "col"; cell.textContent = label; header.appendChild(cell);
+  }
+  const body = table.createTBody();
+  for (const row of scores.rows) {
+    const tr = body.insertRow(); tr.insertCell().textContent = `${row.avatar} ${row.name}`;
+    for (const column of scores.columns) tr.insertCell().textContent = String(row.values[column.key] ?? 0);
+  }
+  container.appendChild(table);
+  if (!scores.rows.length) container.appendChild(document.createTextNode("No scores yet."));
+}
+findEgyptianWarElement(".egyptian-war-side-tabs").addEventListener("keydown", (event) => {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const buttons = [...findEgyptianWarElement(".egyptian-war-side-tabs").querySelectorAll("button:not(:disabled)")];
+  const index = buttons.indexOf(event.target);
+  if (index < 0) return;
+  event.preventDefault(); event.stopPropagation();
+  const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1
+    : (index + (event.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length;
+  buttons[next].click(); buttons[next].focus();
+});
+findEgyptianWarElement("#show-game-scoreboard").addEventListener("click", () => showEgyptianWarSidePanel("scoreboard"));
+findEgyptianWarElement("#egyptian-war-reset-scores").addEventListener("click", async () => {
+  if (!currentContext?.isHost) return;
+  const result = await currentContext.resetScoreboard?.();
+  if (result && !result.success) currentContext.notify(result.message);
+});
+
 const egyptianWarClientModule = {
   mount(context) {
     currentContext = context;
@@ -1289,6 +1337,8 @@ const egyptianWarClientModule = {
     ].filter(Boolean);
     updateEgyptianWarKeyHints();
     applyEgyptianWarDisplay();
+    offlinePlayers = []; hostRecoveryDeadline = null;
+    findEgyptianWarElement("#egyptian-war-reset-scores").hidden = !context.isHost || !context.resetScoreboard;
     showEgyptianWarGame(context.launchData);
     timerInterval = setInterval(renderEgyptianWarTurnTimer, 100);
     return {
@@ -1303,6 +1353,22 @@ const egyptianWarClientModule = {
         }
       },
       receivePlatformEvent(event) {
+        if (event.type === "host-changed") {
+          egyptianWarHostControls.classList.toggle("d-none", !currentContext.isHost);
+          findEgyptianWarElement("#egyptian-war-reset-scores").hidden = !currentContext.isHost || !currentContext.resetScoreboard;
+          for (const seat of egyptianWarPlayers.children) {
+            const actions = seat.querySelector(".egyptian-war-disconnected-actions");
+            if (actions) { tableLayoutObserver?.unobserve(actions); actions.remove(); }
+          }
+          if (previousEgyptianWarState) renderEgyptianWarState(previousEgyptianWarState);
+          renderSpectators(lastSpectators);
+        }
+        if (event.type === "host-status") {
+          hostRecoveryDeadline = event.payload.recoveryDeadline;
+          if (Number.isFinite(event.payload.serverNow)) offlineClockOffset = event.payload.serverNow - Date.now();
+          renderOfflineStatus();
+        }
+        if (event.type === "scoreboard") renderScoreboard(event.payload);
         if (event.type === "spectators") renderSpectators(event.payload);
         if (event.type === "chat-message") renderChatMessage(event.payload);
       },

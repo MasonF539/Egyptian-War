@@ -46,7 +46,7 @@ const egyptianWarDisplayOptions = [
     ] }
   ];
 
-export const egyptianWar: GameDefinition & { displayOptions: typeof egyptianWarDisplayOptions } = {
+export const egyptianWar: GameDefinition & { displayOptions: typeof egyptianWarDisplayOptions; scoreboard: Array<{ key: string; label: string; sort?: "asc" | "desc" }> } = {
   id: "egyptian-war",
   name: "Egyptian War",
   description:
@@ -78,6 +78,11 @@ export const egyptianWar: GameDefinition & { displayOptions: typeof egyptianWarD
   ],
 
   displayOptions: egyptianWarDisplayOptions,
+  scoreboard: [
+    { key: "wins", label: "Wins" },
+    { key: "slaps", label: "Successful slaps" },
+    { key: "false-slaps", label: "False slaps", sort: "asc" }
+  ],
 
   rules: [
     "The server shuffles the deck, deals every card face down, and randomly selects the first player.",
@@ -100,24 +105,6 @@ export const egyptianWar: GameDefinition & { displayOptions: typeof egyptianWarD
   ],
 
   settings: [
-    {
-      key: "offlineAutoPlay",
-      label: "Auto-play Offline Players",
-      description: "Pause briefly for reconnection, then automatically play offline players' turns. They can rejoin and take control again.",
-      defaultValue: true
-    },
-    {
-      type: "number",
-      control: "range",
-      key: "offlineGraceSeconds",
-      label: "Offline Waiting Time",
-      description: "Seconds to wait before auto-play takes over when enabled. A manual host pause is preserved.",
-      defaultValue: 60,
-      min: 15,
-      max: 300,
-      step: 5,
-      unit: "second"
-    },
     {
       type: "number",
       key: "deckCount",
@@ -198,6 +185,24 @@ export const egyptianWar: GameDefinition & { displayOptions: typeof egyptianWarD
       min: 5,
       max: 120,
       step: 1,
+      unit: "second"
+    },
+    {
+      key: "offlineAutoPlay",
+      label: "Auto-play Offline Players",
+      description: "Pause briefly for reconnection, then automatically play offline players' turns. They can rejoin and take control again.",
+      defaultValue: true
+    },
+    {
+      type: "number",
+      control: "range",
+      key: "offlineGraceSeconds",
+      label: "Offline Waiting Time",
+      description: "Seconds to wait before auto-play takes over when enabled. A manual host pause is preserved.",
+      defaultValue: 60,
+      min: 15,
+      max: 300,
+      step: 5,
       unit: "second"
     }
   ]

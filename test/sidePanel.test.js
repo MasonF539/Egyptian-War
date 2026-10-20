@@ -194,7 +194,7 @@ test("messages from other players show an unread badge while collapsed", () => {
 
     view.bubble.click();
     assert.equal(view.badge.hidden, true);
-    assert.equal(view.bubble.getAttribute("aria-label"), "Open chat");
+    assert.equal(view.bubble.getAttribute("aria-label"), "Open game panel");
   } finally {
     view.close();
   }

@@ -1343,7 +1343,7 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
 
 .egyptian-war-side-tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.35rem;
   padding: 0.28rem;
   background: rgba(0, 0, 0, 0.32);
@@ -1493,7 +1493,7 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
 
 @media (max-width: 479.98px) {
   .egyptian-war-side-panel {
-    width: min(20rem, 52vw);
+    width: clamp(12rem, 52vw, 20rem);
   }
 
   .egyptian-war-side-panel-heading {
@@ -1650,7 +1650,21 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
 }
 [data-card-style="midnight"] .playing-card.is-joker .playing-card-corner { color: #ffe5a3; }
 [data-card-style="midnight"] .playing-card-joker-ornament { color: #f5cf76; }
-.egyptian-war-key-hint { display: block; width: fit-content; margin: .15rem auto 0; padding: .05rem .4rem; font: 600 .65em system-ui, sans-serif; color: inherit; background: rgba(0,0,0,.18); border: 1px solid currentColor; border-radius: .25rem; }
+.egyptian-war-key-hint {
+  display: block;
+  width: fit-content;
+  min-width: 1.8em;
+  margin: 0.22rem auto 0;
+  padding: 0.12em 0.6em 0.2em;
+  font: 700 0.6em / 1.15 system-ui, sans-serif;
+  letter-spacing: 0.03em;
+  color: #fff5dc;
+  background: linear-gradient(#454548, #29292d);
+  border: 1px solid rgba(255, 245, 220, 0.45);
+  border-radius: 0.35em;
+  box-shadow: inset 0 -0.14em 0 rgba(0, 0, 0, 0.45), 0 0.08em 0.15em rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 1px #000;
+}
 .egyptian-war-key-hint[hidden], .egyptian-war-action-subtitle[hidden] { display: none; }
 #egyptian-war-play-card .egyptian-war-action-label { white-space: normal; line-height: 1.1; }
 
@@ -1678,4 +1692,66 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
     padding: 0.1rem 0.25rem;
     font-size: 0.55rem;
   }
+}
+
+.egyptian-war-offline-status {
+  height: 1.2rem;
+  margin: 0 0 0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  text-align: right;
+  color: #ffe08a;
+}
+.egyptian-war-scoreboard { min-height: 0; flex: 1 1 auto; padding: 0.35rem; overflow: auto; }
+.egyptian-war-scoreboard-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  min-height: 1.75rem;
+  margin-bottom: 0.25rem;
+}
+.egyptian-war-scoreboard-heading > p { font-size: 0.75rem; font-weight: 600; line-height: 1.2; margin: 0; }
+.egyptian-war-scoreboard-heading > button { flex-shrink: 0; padding: 0.2rem 0.35rem; font-size: 0.625rem; line-height: 1.2; white-space: nowrap; }
+.egyptian-war-scoreboard table { font-size: 0.7rem; margin-bottom: 0.35rem; }
+.egyptian-war-scoreboard th { font-size: 0.65rem; }
+.egyptian-war-scoreboard td:first-child { max-width: 5rem; overflow-wrap: anywhere; }
+.egyptian-war-scoreboard[hidden] { display: none; }
+.egyptian-war-side-tabs .btn { font-size: clamp(0.6rem, 1.1vw, 0.8rem); padding-inline: 0.3rem; }
+#egyptian-war-score-table { overflow-x: auto; }
+
+/* Keep panel controls in a dark extension at every screen size. */
+.egyptian-war-side-panel {
+  container: egyptian-war-panel / inline-size;
+  max-width: calc(100% - 3.75rem);
+  border-top-right-radius: 0;
+  /* Opaque matching borders avoid a shade change where the two boxes join. */
+  --egyptian-war-panel-border: #383c44;
+  border-color: var(--egyptian-war-panel-border);
+}
+.egyptian-war-side-panel-heading {
+  border-top-right-radius: 0;
+  background: #0c1017;
+}
+.egyptian-war-panel-tools {
+  display: flex;
+  position: absolute;
+  left: 100%;
+  top: -1px;
+  align-items: center;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: #0c1017;
+  border: 1px solid var(--egyptian-war-panel-border);
+  border-left: 0;
+  border-radius: 0 0.65rem 0.65rem 0;
+}
+.egyptian-war-panel-tools > button { width: 1.75rem; min-width: 1.75rem; height: 1.75rem; flex-basis: 1.75rem; }
+.egyptian-war-side-tabs .btn { white-space: nowrap; }
+@container egyptian-war-panel (max-width: 340px) {
+  .egyptian-war-side-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.15rem; }
+  .egyptian-war-side-tabs .btn { font-size: 0.55rem; padding-inline: 0.05rem; }
 }

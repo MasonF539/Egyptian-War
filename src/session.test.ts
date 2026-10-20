@@ -12,6 +12,7 @@ import {
   type PublicEgyptianWarState
 } from "./engine.js";
 import { egyptianWarServer } from "./session.js";
+import { slapCollectionWindowMs } from "./slapArbitration.js";
 
 const settings = {
   deckCount: 1,
@@ -44,7 +45,9 @@ function makeSession(playerCount = 3, overrides: Record<string, number | boolean
     role: "player"
   }));
   const events: GameEvent[] = [];
-  const context: GameSessionContext = {
+  const stats: Array<{ memberId: string; key: string }> = [];
+  const context: GameSessionContext & { recordStat: (memberId: string, key: string) => void } = {
+    recordStat: (memberId, key) => { stats.push({ memberId, key }); },
     roomCode: "TEST01",
     members: () => members,
     broadcastState: () => {},
@@ -54,7 +57,7 @@ function makeSession(playerCount = 3, overrides: Record<string, number | boolean
     randomInteger: (maxExclusive) => maxExclusive - 1
   };
   const session = egyptianWarServer.createSession(context, { ...settings, ...overrides });
-  return { session, events, members };
+  return { session, events, members, stats };
 }
 
 test("offline players auto-play after the wait and reconnect into their existing hand", (t) => {
@@ -522,5 +525,32 @@ test("a winner reconnecting during the victory animation retains the winner iden
     assert.equal(state.players.find((player) => player.id === state.winnerId)?.name, "host");
     t.mock.timers.tick(animation.durationMs);
     assert.equal(internals(session).state.winnerId, "host-new");
+  } finally { session.dispose(); }
+});
+
+test("disconnect deadlines stay stable and server-resolved slaps report statistics with explanations", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const { session, members, stats } = makeSession();
+  try {
+    const viewer = { memberId: "host", role: "player" } as const;
+    const state = internals(session).state;
+    state.pile = [card("2", "first"), card("2", "second")];
+    state.penaltyPileCardCount = 0;
+    const publicBefore = session.getPublicState(viewer) as Record<string, unknown>;
+    assert.equal(publicBefore.slapReason, undefined);
+    const slap = session.handleAction("host", { type: "slap" });
+    t.mock.timers.tick(slapCollectionWindowMs);
+    assert.equal((await slap).success, true);
+    assert.deepEqual(stats, [{ memberId: "host", key: "slaps" }]);
+    assert.match(state.activityMessage, /Slap rule: Double/);
+    members[1].isConnected = false;
+    session.memberDisconnected?.("guest");
+    const first = session.getLifecycleState() as unknown as { disconnections: Array<{ autoPlayAt: number; autoPlaying: boolean }> };
+    const deadline = first.disconnections[0].autoPlayAt;
+    t.mock.timers.tick(10_000);
+    const later = session.getLifecycleState() as unknown as typeof first;
+    assert.equal(later.disconnections[0].autoPlayAt, deadline);
+    t.mock.timers.tick(50_000);
+    assert.equal((session.getLifecycleState() as unknown as typeof first).disconnections[0].autoPlaying, true);
   } finally { session.dispose(); }
 });

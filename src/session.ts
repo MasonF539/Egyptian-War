@@ -15,6 +15,7 @@ import {
   createPublicEgyptianWarState,
   EgyptianWarRuleError,
   isEgyptianWarStateSlappable,
+  getEgyptianWarSlapReason,
   removeEgyptianWarPlayer,
   resolveEgyptianWarTurnTimeout,
   type EgyptianWarAction,
@@ -97,9 +98,10 @@ class EgyptianWarSession implements GameSession {
   private readonly offlineGraceMs: number;
   private readonly offlineTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly autoPlayingMembers = new Set<string>();
+  private readonly offlineDeadlines = new Map<string, number>();
 
   constructor(
-    private readonly context: GameSessionContext,
+    private readonly context: GameSessionContext & { recordStat?: (memberId: string, key: string) => void },
     settings: Readonly<Record<string, GameSettingValue>>
   ) {
     this.offlineAutoPlay = settings.offlineAutoPlay !== false;
@@ -141,7 +143,8 @@ class EgyptianWarSession implements GameSession {
   getLifecycleState() {
     return {
       isPaused: this.isPaused,
-      isBusy: this.isAnimating || this.pendingSlaps !== null
+      isBusy: this.isAnimating || this.pendingSlaps !== null,
+      disconnections: this.getOfflinePlayers()
     };
   }
 
@@ -151,7 +154,7 @@ class EgyptianWarSession implements GameSession {
         .filter((member) => member.role === "player" && member.isConnected)
         .map((member) => member.id)
     );
-    return createPublicEgyptianWarState(
+    return { ...createPublicEgyptianWarState(
       this.state,
       this.isPaused,
       this.isAnimating,
@@ -163,7 +166,7 @@ class EgyptianWarSession implements GameSession {
           ? "Game paused by the host."
           : null,
       connectedIds
-    );
+    ), offlinePlayers: this.getOfflinePlayers(), serverNow: this.context.now() };
   }
 
   handleAction(memberId: string, action: GameActionEnvelope) {
@@ -218,6 +221,7 @@ class EgyptianWarSession implements GameSession {
   memberDisconnected(memberId: string): void {
     if (this.state.status !== "playing") return;
     if (this.offlineAutoPlay && !this.offlineTimers.has(memberId)) {
+      this.offlineDeadlines.set(memberId, this.context.now() + this.offlineGraceMs);
       this.offlineTimers.set(memberId, setTimeout(() => {
         this.offlineTimers.delete(memberId);
         if (this.disposed || this.state.status !== "playing") return;
@@ -371,10 +375,18 @@ class EgyptianWarSession implements GameSession {
     this.autoPlayingMembers.clear();
   }
 
+  private getOfflinePlayers() {
+    return this.context.members().filter((member) => member.role === "player" && !member.isConnected)
+      .map((member) => ({ id: member.id, name: member.name,
+        autoPlayAt: this.offlineDeadlines.get(member.id) ?? null,
+        autoPlaying: this.autoPlayingMembers.has(member.id) }));
+  }
+
   private clearOfflineMember(memberId: string): void {
     const timer = this.offlineTimers.get(memberId);
     if (timer !== undefined) clearTimeout(timer);
     this.offlineTimers.delete(memberId);
+    this.offlineDeadlines.delete(memberId);
     this.autoPlayingMembers.delete(memberId);
   }
 
@@ -612,6 +624,8 @@ class EgyptianWarSession implements GameSession {
         : null;
     const slappableBefore = isEgyptianWarStateSlappable(this.state);
     const wasSlappable = action === "slap" && slappableBefore;
+    const slapReason = action === "slap" ? getEgyptianWarSlapReason(
+      this.state.pile.slice(this.state.penaltyPileCardCount), this.state.settings) : null;
     const versionBefore = this.state.pileVersion;
     const previousPileCount = this.state.pile.length;
     const previousCounts = new Map(
@@ -635,6 +649,12 @@ class EgyptianWarSession implements GameSession {
         at: this.context.now(),
         wasSlappable: slappableBefore
       };
+    }
+    if (action === "slap") {
+      this.context.recordStat?.(memberId, wasSlappable ? "slaps" : "false-slaps");
+      this.state.activityMessage += wasSlappable
+        ? ` Slap rule: ${slapReason}.`
+        : " No enabled slap rule matched the face-up pile.";
     }
     this.suspendTurnTimer();
     const currentAfter = this.state.players[this.state.currentPlayerIndex]?.id ?? null;

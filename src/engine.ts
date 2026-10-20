@@ -605,29 +605,33 @@ function isChallengeCard(rank: CardRank): boolean {
   return Object.hasOwn(challengeAttempts, rank);
 }
 
-export function isEgyptianWarPileSlappable(
+export function isEgyptianWarPileSlappable(pile: readonly Card[], settings: EgyptianWarSettings): boolean {
+  return getEgyptianWarSlapReason(pile, settings) !== null;
+}
+
+export function getEgyptianWarSlapReason(
   pile: readonly Card[],
   settings: EgyptianWarSettings
-): boolean {
+): string | null {
   if (pile.length === 0) {
-    return false;
+    return null;
   }
 
   const last = pile[pile.length - 1].rank;
 
   if (last === "joker") {
-    return true;
+    return "Joker";
   }
 
   if (settings.allowDoubles && pile.length >= 2) {
     if (last === pile[pile.length - 2].rank) {
-      return true;
+      return "Double";
     }
   }
 
   if (settings.allowSandwiches && pile.length >= 3) {
     if (last === pile[pile.length - 3].rank) {
-      return true;
+      return "Sandwich";
     }
   }
 
@@ -647,7 +651,7 @@ export function isEgyptianWarPileSlappable(
       );
 
     if (isSequence(aceLowValues) || isSequence(aceHighValues)) {
-      return true;
+      return "Three in a row";
     }
   }
 
@@ -656,7 +660,7 @@ export function isEgyptianWarPileSlappable(
     pile.length >= 2 &&
     last === pile[0].rank
   ) {
-    return true;
+    return "Top bottom";
   }
 
   if (settings.allowTens) {
@@ -673,7 +677,7 @@ export function isEgyptianWarPileSlappable(
       previousValue <= 10 &&
       previousValue + lastValue === 10
     ) {
-      return true;
+      return "Tens";
     }
   }
 
@@ -683,11 +687,11 @@ export function isEgyptianWarPileSlappable(
       last === "king" && previous === "queen" ||
       last === "queen" && previous === "king"
     ) {
-      return true;
+      return "Marriage";
     }
   }
 
-  return false;
+  return null;
 }
 
 export function isEgyptianWarStateSlappable(

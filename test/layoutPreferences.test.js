@@ -7,7 +7,7 @@ const { JSDOM } = require("jsdom");
 const gameDirectory = path.resolve(__dirname, "..");
 const storageKey = "egyptian-war:layout";
 
-function mountClient({ narrow = false, saved, blockedStorage = false, input, display } = {}) {
+function mountClient({ narrow = false, saved, blockedStorage = false, input, display, host = false } = {}) {
   const dom = new JSDOM(readFileSync(path.join(gameDirectory, "public/template.html"), "utf8"), {
     url: "http://localhost", runScripts: "outside-only"
   });
@@ -22,12 +22,14 @@ function mountClient({ narrow = false, saved, blockedStorage = false, input, dis
   window.eval(readFileSync(path.join(gameDirectory, "public/client.js"), "utf8"));
   const instance = gameModule.mount({
     root: window.document.body, input, display,
-    memberId: "me", isHost: false, role: "player",
+    memberId: "me", get isHost() { return host; }, role: "player",
+    resetScoreboard: async () => ({ success: true }),
     launchData: { settings: {}, chatEnabled: true },
     audio: { setScene() {}, playEffect() {} }
   });
   return {
     window, instance,
+    setHost(value) { host = value; },
     el: (id) => window.document.getElementById(id),
     saved: () => window.localStorage.getItem(storageKey),
     close() { instance.destroy(); window.close(); }
@@ -186,5 +188,43 @@ test("player seats keep their DOM identity and focus while counts and connection
     assert.equal(seat.querySelector(".egyptian-war-disconnected-actions"), null);
     view.instance.receiveState({ ...state, players: [state.players[1]] });
     assert.equal(seat.isConnected, false);
+  } finally { view.close(); }
+});
+
+test("scoreboard tab, reconnect countdowns and live host controls remain usable", () => {
+  const view = mountClient({ narrow: true });
+  const state = { status: "playing", players: [
+    { id: "me", name: "Me", avatar: "M", isConnected: true, cardCount: 26 },
+    { id: "guest", name: "Guest", avatar: "G", isConnected: false, cardCount: 26 }
+  ], currentPlayerId: "me", recentCards: [], winnerId: null, isPaused: true,
+    isAnimating: false, turnTimerSeconds: 15, turnTimeRemainingMs: 15000,
+    challenge: null, pileCardCount: 0, hasFaceUpCards: false, activityMessage: "", canPlayCard: false,
+    serverNow: 100000, offlinePlayers: [{ id: "guest", name: "Guest", autoPlayAt: 160000, autoPlaying: false }] };
+  try {
+    view.instance.receiveState(state);
+    assert.match(view.el("egyptian-war-offline-status").textContent, /Paused.*Guest: auto-play in 60s/);
+    view.instance.receiveState({ ...state, serverNow: 101000 });
+    assert.match(view.el("egyptian-war-offline-status").textContent, /59s/);
+    view.instance.receivePlatformEvent({ type: "scoreboard", payload: {
+      columns: [{ key: "wins", label: "Wins" }], rows: [{ name: "<img src=x>", avatar: "G", values: { wins: 2 } }]
+    } });
+    view.el("show-game-scoreboard").click();
+    assert.equal(view.el("egyptian-war-scoreboard").hidden, false);
+    assert.equal(view.el("egyptian-war-chat").hidden, true);
+    assert.equal(view.el("egyptian-war-score-table").querySelector("img"), null);
+    assert.match(view.el("egyptian-war-score-table").textContent, /2/);
+    view.el("show-game-scoreboard").dispatchEvent(new view.window.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+    assert.equal(view.el("show-game-spectators").getAttribute("aria-selected"), "true");
+    view.el("show-game-spectators").dispatchEvent(new view.window.KeyboardEvent("keydown", { key: "End", bubbles: true }));
+    assert.equal(view.el("show-game-scoreboard").getAttribute("aria-selected"), "true");
+    view.setHost(true);
+    view.instance.receivePlatformEvent({ type: "host-changed", payload: { isHost: true } });
+    assert.equal(view.el("egyptian-war-host-controls").classList.contains("d-none"), false);
+    assert.equal(view.el("egyptian-war-reset-scores").hidden, false);
+    assert.ok(view.el("egyptian-war-players").querySelector("button"));
+    view.setHost(false);
+    view.instance.receivePlatformEvent({ type: "host-changed", payload: { isHost: false } });
+    assert.equal(view.el("egyptian-war-players").querySelector("button"), null);
+    assert.equal(view.el("egyptian-war-reset-scores").hidden, true);
   } finally { view.close(); }
 });

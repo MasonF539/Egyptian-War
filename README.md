@@ -47,7 +47,8 @@ automatic play takes over their turns. The host can resume early or keep the
 game manually paused, and a returning player retains their hand and control.
 The lobby settings can change this waiting time or disable takeover. Multiple
 offline players each receive their own waiting period. GameHub's host recovery
-timeout still closes rooms whose host does not return.
+timeout transfers control to a connected player, closing the room only when no
+eligible successor is available. The host can also transfer control manually.
 The package's public state also states whether the current player may legally
 play a card, keeping the action disabled during the final slap window after a
 failed challenge. Its numeric countdown stays fixed at the right edge inside
@@ -59,6 +60,12 @@ and its games share one SDK installation. Once both packages
 are published, GameHub installs an exact Egyptian War version and enables it
 through `gamehub.config.json`. GameHub's `npm run verify:packages` command
 currently verifies that both packed artifacts work without monorepo source.
+
+The side panel's Scoreboard tab shows room wins, successful slaps and false
+slaps. Totals are held by GameHub only for the room lifetime and persist across
+restarts and reconnects. Hosts can reset them. Slap explanations identify the
+matched rule after resolution, or explain the penalty for a false slap. The
+fixed status line shows offline auto-play deadlines and the current pause state.
 
 ## Slap rules and penalties
 

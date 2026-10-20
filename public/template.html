@@ -30,25 +30,28 @@
     <div class="egyptian-war-play-layout">
       <button id="open-game-side-panel" class="egyptian-war-chat-bubble" type="button"
         aria-controls="egyptian-war-side-panel" aria-expanded="false"
-        aria-label="Open chat" title="Open chat" hidden>
+        aria-label="Open game panel" title="Open game panel" hidden>
         <span class="egyptian-war-chat-bubble-icon" aria-hidden="true">&#x1F4AC;</span>
         <span id="egyptian-war-chat-badge" class="egyptian-war-chat-badge" aria-hidden="true" hidden></span>
       </button>
 
       <aside id="egyptian-war-side-panel" class="egyptian-war-side-panel" aria-label="Game communication">
         <div class="egyptian-war-side-panel-heading">
-          <div class="egyptian-war-side-tabs" role="tablist" aria-label="Chat or spectators">
+          <div class="egyptian-war-side-tabs" role="tablist" aria-label="Chat, spectators or scoreboard">
             <button id="show-game-chat" class="btn btn-sm btn-light" type="button" role="tab"
               aria-selected="true" aria-controls="egyptian-war-chat">Chat</button>
             <button id="show-game-spectators" class="btn btn-sm btn-outline-light" type="button" role="tab"
               aria-selected="false" aria-controls="egyptian-war-spectators">Spectators</button>
+            <button id="show-game-scoreboard" class="btn btn-sm btn-outline-light" type="button" role="tab"
+              aria-selected="false" aria-controls="egyptian-war-scoreboard">Scoreboard</button>
           </div>
+          <div class="egyptian-war-panel-tools">
           <button id="toggle-game-side-panel" class="btn btn-sm btn-outline-light egyptian-war-side-expand"
             type="button" aria-expanded="false" aria-label="Expand panel" title="Expand panel">
             <span aria-hidden="true"></span><span aria-hidden="true"></span>
           </button>
           <button id="minimize-game-side-panel" class="egyptian-war-side-minimize" type="button"
-            aria-controls="open-game-side-panel" aria-label="Minimize chat" title="Minimize chat">         
+            aria-controls="open-game-side-panel" aria-label="Minimize panel" title="Minimize panel">
             <svg viewBox="0 0 24 24" width="14" height="14"
               aria-hidden="true" focusable="false">
               <path
@@ -63,6 +66,7 @@
                 stroke-linejoin="round" />
             </svg>
           </button>
+          </div>
         </div>
 
         <section id="egyptian-war-chat" class="egyptian-war-chat" role="tabpanel"
@@ -76,6 +80,15 @@
               maxlength="300" autocomplete="off" placeholder="Write a message">
             <button class="btn btn-outline-light" type="submit">Send</button>
           </form>
+        </section>
+
+        <section id="egyptian-war-scoreboard" class="egyptian-war-scoreboard" role="tabpanel"
+          aria-labelledby="show-game-scoreboard" hidden>
+          <div class="egyptian-war-scoreboard-heading">
+            <p title="Totals clear when the room closes.">Room Totals</p>
+            <button id="egyptian-war-reset-scores" class="btn btn-outline-danger btn-sm" type="button" hidden>Reset totals</button>
+          </div>
+          <div id="egyptian-war-score-table" tabindex="0" role="region" aria-label="Room scores"></div>
         </section>
 
         <section id="egyptian-war-spectators" class="egyptian-war-spectators" role="tabpanel"
@@ -111,6 +124,7 @@
         </div>
 
         <div class="egyptian-war-action-area">
+          <p id="egyptian-war-offline-status" class="egyptian-war-offline-status" aria-live="off"></p>
           <p id="egyptian-war-turn" class="egyptian-war-turn-inline" aria-live="polite" aria-atomic="true"></p>
           <div id="egyptian-war-turn-timer" class="egyptian-war-turn-timer mb-2 is-hidden"
             aria-hidden="true">
