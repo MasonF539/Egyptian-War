@@ -4,17 +4,177 @@ Egyptian War is a versioned game plugin made for GameHub. The package owns the
 game-specific server and browser behavior, while GameHub provides the room,
 transport, lobby, spectator, and hosting services required to run it.
 
+## Game overview
+
+Egyptian War is a multiplayer reaction card game. Players reveal cards into a
+shared pile, answer face-card challenges, and race to slap enabled patterns.
+A successful slap wins the pile and can bring a player with no cards back into
+the game. False slaps carry penalties.
+
+- Game name: Egyptian War
+- Number of players: 2-6
+- Typical game length: Not yet measured; varies with players, decks, and rules.
+- Player objective: Win piles and collect every card.
+- Winning condition: One player collects all cards after any remaining valid
+  reentry slap opportunity resolves.
+
+## Intended player experience
+
+Players should feel attentive and involved even between their own turns. The
+public pile creates moments of recognition and urgency: a newly played card can
+open a slap opportunity for anyone, including someone who has run out of cards.
+Face-card challenges add anticipation as the responder tries to avoid losing
+the pile. Winning a pile should feel like a meaningful reversal of fortune.
+
+The rules and feedback should make consequences understandable. False-slap
+penalties create risk, while post-action explanations help players learn why
+an attempt succeeded or failed. The game should remain readable and usable
+on phones as well as larger screens.
+
+## Design priorities
+
+1. **Keep everyone involved.** Allow slaps outside the player's turn and preserve
+   reentry opportunities for players without cards, subject to the existing
+   cooldown rules. Players should still have reasons to watch the pile.
+2. **Make pressure readable.** Keep the current turn, challenge, timer, and action
+   availability clear. Explain resolved slaps without announcing live matches
+   or revealing hidden decks.
+3. **Keep decisions authoritative and consistent.** Resolve rules, timers,
+   competing slaps, penalties, and scores on the server. Client clocks and
+   display ping must not determine outcomes or supply hidden information.
+4. **Support a continuous room session.** Preserve hands through reconnection,
+   offer controlled offline autoplay and host handoff, and keep layouts and
+   controls usable as screen dimensions change. Manual pauses remain respected.
+
+## Hidden information and spectators
+
+Players can see names, avatars, card counts, whose turn it is, connection status,
+challenge details, and the visible pile. Deck contents and order stay hidden
+from everyone. Spectators see the same public information and cannot play or
+slap. Rule explanations appear after a slap resolves; the interface does not
+announce live slap opportunities.
+
+Source locations, state fields, and integration details are recorded in
+[implementation notes](implementation.md).
+
+## Settings reference
+
+These defaults come from `src/definition.ts`. They are shared room rules chosen
+before a match, unlike personal presentation preferences.
+
+| Setting key | Default | Allowed values |
+| --- | --- | --- |
+| `deckCount` | 1 | 1, 2, 3 standard decks |
+| `includeJokers` | Enabled | Adds two Jokers per deck |
+| `allowDoubles` | Enabled | Two adjacent matching ranks |
+| `allowSandwiches` | Enabled | Matching ranks with one card between |
+| `allowThreeInARow` | Enabled | Three ascending or descending ranks, including Ace-low or Ace-high |
+| `allowTopBottom` | Disabled | Newest face-up card matches the first face-up card |
+| `allowTens` | Disabled | Two adjacent number cards total ten; Ace counts as one |
+| `allowMarriage` | Disabled | Adjacent King and Queen in either order |
+| `falseSlapPenaltyCards` | 2 | 1, 2, 3 cards |
+| `turnTimerSeconds` | 15 seconds | 5-120 seconds, increments of 1 |
+| `offlineAutoPlay` | Enabled | Automatic turns after an offline waiting period |
+| `offlineGraceSeconds` | 60 seconds | 15-300 seconds, increments of 5 |
+
+An exposed Joker is always slappable when Jokers are in the deck. Face-down
+penalties and deferred cards do not contribute to any slap pattern. Winning a
+pile adds its cards to the bottom of the winner's deck without shuffling.
+Challenge cards require Jack: 1, Queen: 2, King: 3, Ace: 4, or Joker: 5 response
+attempts. A new challenge card replaces the existing challenge.
+
+### Personal preferences and presets
+
+Rule configurations can be saved using GameHub's presets.
+
+Personal card styles are Classic, Modern, and Midnight; table colors are Emerald,
+Ocean, and Burgundy. Classic and Emerald are the defaults. These choices affect
+only the viewer's presentation. Animation timing is shared, and presentation
+honors system reduced-motion settings.
+
+## Offline players and host ownership
+
+A disconnect pauses active play. With the default settings, a player becomes
+eligible for automatic turns after 60 seconds. Each offline player has their own
+deadline. If several players disconnect, automatic resumption waits until none
+is still in their waiting period. The fixed status line shows pause/running state,
+player names, countdowns, and autoplay status, using server time for countdowns.
+
+The host may resume early or manually keep the game paused. Expiry of the offline
+waiting period does not override a manual pause, including a pause made before
+disconnection. When autoplay is eligible, an offline player's ordinary turn is
+limited to at most one second; the final slap-window timing remains separate.
+Reconnection cancels that player's takeover and restores their existing hand.
+Reconnecting on the current turn allows one grace period of up to five seconds
+per turn, capped at the configured turn duration.
+
+Changing hosts preserves the current match, hands, and scores. The new host can
+pause, resume, and manage disconnected players. Host transfer and offline
+autoplay have separate deadlines.
+
+## Room scoreboard and social panel
+
+The scoreboard tracks wins, successful slaps, and false slaps. Losing a valid slap
+race, or having an attempt ignored or rejected, does not count as a false slap.
+Rows sort by wins, then successful slaps, then fewer false slaps, then player name.
+Totals continue across matches and reconnects in the same room, and clear when
+the room closes or the server stops.
+
+Scoreboard access is inside this game's side panel, alongside Chat and Spectators.
+The Room Totals header has a host-only Reset totals button at its top right.
+Resetting requires confirmation; cancelling preserves the totals.
+
+Players and spectators share room chat. The panel supports medium, expanded,
+and minimized modes, remembers its size, and uses a dark side extension for
+expand/minimize controls. Chat, Spectators, and Scoreboard tabs have equal
+widths and keyboard navigation. The spectator list shows who is watching and
+their connection status.
+
+## Current layout and controls
+
+The usable board area sits above the turn label, timer, and action buttons. Its
+own aspect ratio chooses a tall, rounded rectangular pool-table shape without
+pockets when taller than wide, and the oval table when wider than tall. Player
+seats follow the shape; the title stays at the top and the action controls remain
+below the arena. Size changes respond to available width and height.
+
+Slap Rules stays in the upper-left corner and remembers its collapsed state.
+Narrow screens initially collapse the rules and minimize the side panel when no
+saved layout preference exists. Opening the panel restores its saved size.
+The turn label uses fixed-height space above the timer, aligns to the timer's
+right edge, and remains an `aria-live` region. It says "It's your turn" for the
+local player and names the current player for other viewers.
+
+The default controls are E for Play a Card and Space for Slap. Keyboard users
+see keycap hints that follow their chosen bindings; touch users keep the
+tap-oriented subtitle.
+The side panel overlays part of the play area, with its controls on an external
+side extension. Long activity text scrolls within its reserved area so it does
+not cover player seats.
+
+## Slap timing and action pacing
+
+Valid competing slaps are collected for 300 ms, with contenders within 50 ms of
+the earliest server receipt eligible to win. Weighted selection favors earlier
+arrivals; display ping does not adjust the result. A slap that narrowly loses
+a race with a newly played card can be forgiven when the previous pile offered
+a valid slap.
+
+A failed challenge ending on a slappable card opens a four-second final slap
+window. Card plays, penalties, pile transfers, and wins have presentation
+animations; slaps remain available during the card-play animation because the
+card is already on the pile. Reduced motion changes presentation while keeping
+the same authoritative rules and timing. Exact animation durations and stale-slap
+checks are listed in the [implementation notes](implementation.md).
+
 ## Implementation status
 
-This document distinguishes implemented behavior from planned gameplay. A checked item means the behavior exists in the application, not merely that its design has been selected.
-Checked implementation items do not imply that every multiplayer interaction has completed manual gameplay testing; automated engine, arbitration, Socket.IO integration, and browser-animation tests run during the Docker build.
+Checked items describe implemented game behavior. Manual multiplayer testing
+and playtest findings are recorded separately.
 
 ### Game availability
 
 - [x] Keep Egyptian War visible so players can read its rules and configure its settings.
-- [x] Represent playability in the shared game definition.
-- [x] Disable the Start Game button and show a coming-soon status when the selected game is not playable.
-- [x] Reject attempts to start an unplayable game on the server.
 - [x] Mark Egyptian War playable after its server-authoritative game loop and client interface are implemented.
 
 ### Existing configuration
@@ -38,17 +198,15 @@ Checked implementation items do not imply that every multiplayer interaction has
 - [x] Implement Jack, Queen, King, Ace, and Joker challenge attempts (Jokers allow 5 attempts).
 - [x] Award the pile to the most recent challenge-card player when a challenge fails, except while a valid final-attempt slap window is active.
 - [x] Validate slaps on the server and resolve competing slaps fairly.
-- [x] Use server receipt time for slap candidates so clients cannot improve their position by delaying timing acknowledgements. Collect requests for 300 ms, assign a fixed server-controlled 25 ms uncertainty to each candidate, compare candidates within the resulting 50 ms window, and select eligible candidates with smooth exponential weighting driven by Node's cryptographically secure random source.
+- [x] Resolve competing slaps using server receipt times, with earlier attempts favored and no client-controlled timing advantage. See the [implementation notes](implementation.md#timing-and-verification-reference) for arbitration details.
 - [x] Finish accepted slap arbitration before honoring a host pause, and allow candidates accepted before a disconnect-triggered pause to resolve instead of silently discarding them.
 - [x] Skip players who run out of cards; continue the turn with the next eligible player.
 - [x] Pass an unfinished challenge to the next eligible player with the remaining attempts unchanged when its responder runs out of cards.
 - [x] Allow eliminated players to reenter through a valid slap.
 - [x] Detect when one player owns every card and end the game.
 - [x] Return the room to the lobby after the game ends.
-- [x] Pause the active game when a player disconnects; allow the host to resume while the player is away, and restore the saved pause preference after they reconnect. Lobby-only disconnects still expire after two minutes.
+- [x] Pause the active game when a player disconnects; allow the host to resume while the player is away, and restore the saved pause preference after they reconnect.
 - [x] Gray out disconnected players' table seats and show a yellow disconnected alert beneath each seat.
-- [x] Provide a host-only Close Lobby control in the lobby and expose confirmed Exit Game or Leave Game actions through GameHub's reusable Game settings tab.
-- [x] Hide the room code by default for non-host players while showing it by default to the host.
 - [x] Preserve a reconnecting active player's remaining turn time and allow one short grace period per turn, capped at the configured turn duration, then continue normal automatic turn play if the timer expires.
 - [x] Send recent face-up cards in reconnect snapshots so the board restores the visible pile after reconnecting.
 - [x] Reject slap actions when there are no face-up cards available to slap, including immediately after a pile transfer or reconnect.
@@ -65,7 +223,6 @@ Checked implementation items do not imply that every multiplayer interaction has
 - [x] Have slaps carry the `pileVersion` the player last saw. A slap that lost a short race with a card play (previous version, previous pile slappable, under 350 ms) is ignored without a penalty.
 - [x] Allow a player to leave voluntarily; their cards are held face-down and added to the next pile, just like a host removal. If removing a player leaves nobody holding cards, the remaining cards go to the next player in turn order immediately.
 - [x] Allow only the host to pause and resume the game; enforce pause state on the server.
-- [x] Support per-game chat capability; validate room membership, message length, and send rate on the server.
 - [x] Preserve a final played card and winner state long enough for the win animation before returning to the lobby.
 - [x] Enforce the player timer on the server and pause it during host pauses and action animations; add a short reconnect grace period, then auto-play on timeout.
 - [x] When the final failed challenge card creates a valid slap, allow slaps for a short fixed window (four seconds, not a whole turn) before awarding the pile to the challenge owner.
@@ -84,43 +241,59 @@ Checked implementation items do not imply that every multiplayer interaction has
 - [x] Place play-card and slap controls immediately below the arena.
 - [x] Display action and challenge messages on the table rather than below it.
 - [x] Show late joiners in a dedicated in-game spectator list, including connection status and host removal controls.
-- [x] Preserve spectator-list updates that arrive while the game client mounts so each spectator sees themselves, allow spectators to return to the lobby through a dedicated confirmation, and offer lobby waiters a Spectate Game action while play remains active.
+- [x] Keep the in-game spectator list current as viewers join, leave, or reconnect.
 - [x] Lay out each player avatar beside their name and card count, with an underline beneath the player details.
 - [x] Highlight the entire current player's seat.
 - [x] Animate cards moving from the pile into the pile winner's area and outline the winner in gold.
 - [x] Animate one hand moving from the slapper's seat to the pile for valid and invalid slap attempts, including invalid reentry attempts by eliminated players; suppress extra hands while their cooldown is active.
 - [x] Animate and retain the final played card while highlighting the game winner in gold.
 - [x] Place a host-only pause/resume button at the upper-right of the gameplay panel.
-- [x] Place a host-only Close Lobby control in the lobby and route the Game settings tab's Exit/Leave action through the appropriate in-app confirmation modal.
 - [x] Put a host-only Kick button beside a disconnected player's table alert.
 - [x] Make the slap-rules list collapsible.
 - [x] On narrow screens, place the collapsed rules Show control directly beside the Slap Rules label without changing the expanded panel or Hide control.
 - [x] Show enabled slap patterns and the false-slap penalty in the upper-left of the gameplay panel.
 - [x] Keep turn-state messages neutral; do not announce when the current pile matches a slap pattern.
-- [x] Show a chat panel only for games whose definitions enable chat.
 - [x] Show the synchronized turn countdown below the table while reserving its layout space when hidden.
 - [x] Keep the current whole seconds stationary at the right inside the timer track above its moving fill, align the timer to both action-button edges, and scale the complete control group together on narrow screens.
 - [x] Decorate the countdown's uncovered track with a blue gradient and progressively revealed sleep marks, ending with a sleeping bear, without changing authoritative timer behavior.
 - [x] Show each browser its latest display-only network round-trip time in the upper-right; never use that client-acknowledged measurement for slap arbitration.
-- [x] Show server connection state as a colored dot with status text on the main menu, in the lobby, and beside the gameplay controls.
-- [x] Fit active gameplay into the browser viewport without page scrolling; overlay Chat and Spectators in one wide bottom-left tab panel with an explicit viewport-relative Expand/Collapse control; place the timer and same-level action buttons in the open bottom-right area; and show turn text directly above the central pile count.
-- [x] Let the Chat/Spectators panel collapse into a small round chat button: it opens at medium size by default, the arrow switches between medium and large, and a small diagonal-arrow button on the panel's corner collapses it to the circle. Reopening restores the size it had before it was collapsed, a new game starts at medium again, and the circle shows an unread count (capped at 9+) for messages from other players that arrived while it was collapsed.
+- [x] Show connection status beside the gameplay controls.
+- [x] Fit active gameplay into the browser viewport without page scrolling; overlay Chat, Spectators, and Scoreboard in the bottom-left panel; keep the timer and action buttons below the board; and show fixed-height, right-aligned turn text above the timer.
+- [x] Let the side panel minimize into a chat bubble, switch between medium and large sizes, and remember layout state across games and reloads. Without a saved preference, phones start minimized and larger screens start at medium. The bubble shows unread messages from other players, capped at 9+.
 - [x] Give the side-panel expand and minimize controls separate, lighter utility-button surfaces so they remain visually distinct from the Chat and Spectators tabs.
-- [x] Keep the collapsed Slap Rules Show button in the top-right while shrinking the surrounding box around its title at every viewport size, then restore the full rules width when expanded.
+- [x] Keep Slap Rules at the upper-left and shrink the collapsed box around its title and adjacent Show control, restoring the full rules width when expanded.
 - [x] Style "Play a Card" and "Slap" buttons as prominent game-action controls, with a secondary "Bring the pain" label and fire accents on Slap.
 - [x] Keep slaps available during active play even when no pattern matches; disable them only when no face-up cards are present, the game is paused or finished, or a non-card-play animation is in progress.
 - [x] Disable Play a Card for every player while a completed challenge is waiting through its final slap window, even though the next player remains identified in public state.
 - [x] Restore active players from a complete reconnect snapshot.
 - [x] Reuse the limited public game-state projection for spectators so they receive the visible pile, public player state, timers, and live animations without hidden decks.
 - [x] Use game-specific background music and synchronize card, slap, pile-win, and game-win sounds with their corresponding presentation animations.
-- [x] Expose persistent, independently adjustable music, lobby alert, and gameplay volume controls through the personal GameHub Settings Audio tab (0% disables a category), and wait for browser-approved user interaction before starting music.
 
 ### Table presentation
 
 - [x] Draw the table with CSS until a project-owned table image is available.
-- [x] Give the CSS table a layered casino-felt, wooden-rail, depth, and drop-shadow treatment while retaining its original oval shape.
+- [x] Give the CSS table layered felt, wooden rails, depth, and shadows, adapting between a tall rounded rectangle and the oval shape according to the available board aspect ratio.
 - [x] Draw cards as accessible HTML/CSS playing-card faces; do not depend on external card image assets.
 - [x] Render mirrored card corners, distinct face-card styling, and a Joker with vertical JOKER labels and a decorative center that is distinguishable from a Jack.
 - [x] Render slap hands with the splayed-hand emoji on desktop and the backhand emoji on coarse-pointer/mobile devices, scale them and their stopping distance with the rendered card size, keep their shadows visually below the hand at every seat rotation, and layer later collected attempts above the official winner.
 - [x] Keep the table, player seats, card motion, spectator area, and controls usable on narrow screens and with reduced-motion preferences.
-- Offer chat per game rather than requiring it in every game; games that rely on secrecy or fast rounds can opt out, while social multiplayer games can enable it.
+
+## Playtest questions (optional)
+
+Keep these questions focused on the intended experience. Detailed test
+instructions, observations, and results belong in separate playtest notes.
+
+- **Can new players follow challenges?** Players should understand who responds,
+  how many attempts remain, and when the pile can still be slapped.
+- **Do players stay involved after running out of cards?** Reentry should feel
+  achievable, and false-slap cooldowns should be understandable.
+- **Are slap results understandable?** Players should understand the outcome even
+  when competing attempts arrive close together or network latency differs.
+- **Does the pace work across configurations?** Player count, decks, and enabled
+  rules should produce engaging play without excessive waits.
+- **Can players recover from disconnects confidently?** Countdown, pause, and
+  host-handoff behavior should match players' expectations.
+- **Is the interface usable across devices?** The board, turn indicator, and
+  controls should remain clear and accessible with keyboard or touch input.
+- **Are room totals clear?** Players should understand what each statistic counts,
+  when totals disappear, and what resetting them does.

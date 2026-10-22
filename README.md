@@ -3,6 +3,10 @@
 This repository contains the server-authoritative Egyptian War game plugin
 for GameHub.
 
+See [Game design](docs/design.md) for the rules, settings, player experience,
+and interface. [Implementation notes](docs/implementation.md) cover source
+locations, internal state, runtime integration, and exact timing constants.
+
 Egyptian War is designed to be installed and run by GameHub through the
 `@masonf539/game-sdk` contracts. It is independently versioned, but it is not a
 standalone web application and depends on GameHub for rooms, networking, the
