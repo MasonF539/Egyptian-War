@@ -77,8 +77,9 @@ function setSlapRulesExpanded(expanded) {
 function restoreLayoutPreferences() {
   const saved = readLayoutPreferences();
   const narrow = globalScope.matchMedia?.("(max-width: 575.98px)").matches === true;
+  const shortLandscape = globalScope.matchMedia?.("(max-height: 500px) and (orientation: landscape)").matches === true;
   egyptianWarSidePanelReopenMode = saved.reopenMode === "large" ? "large" : "medium";
-  setSlapRulesExpanded(typeof saved.rulesExpanded === "boolean" ? saved.rulesExpanded : !narrow);
+  setSlapRulesExpanded(typeof saved.rulesExpanded === "boolean" ? saved.rulesExpanded : !(narrow || shortLandscape));
   const mode = ["closed", "medium", "large"].includes(saved.panelMode)
     ? saved.panelMode : narrow ? "closed" : "medium";
   setEgyptianWarSidePanelMode(mode);
@@ -112,8 +113,10 @@ function createKickPlayerButton(member, className) {
   button.textContent = "Kick";
   button.setAttribute("aria-label", `Kick ${member.name}`);
   button.addEventListener("click", async () => {
-    const response = await currentContext.removeMember(member.id);
-    if (response.message) currentContext.notify(response.message);
+    const context = currentContext;
+    if (!context) return;
+    const response = await context.removeMember(member.id);
+    if (currentContext === context && response.message) context.notify(response.message);
   });
   return button;
 }
@@ -264,6 +267,30 @@ function showEgyptianWarGame(game) {
 
 let tableLayoutObserver = null;
 
+// End seats stay centered; remaining players use evenly spaced flat-side slots.
+// List seats clockwise so their visible order continues to match turn order.
+function egyptianWarRectangleSeats(count) {
+  const rightCount = Math.ceil((count - 2) / 2);
+  const leftCount = Math.floor((count - 2) / 2);
+  const seats = [{ x: 50, y: 10 }];
+  for (let slot = 1; slot <= rightCount; slot++) {
+    seats.push({ x: 82, y: 10 + 78 * slot / (rightCount + 1) });
+  }
+  seats.push({ x: 50, y: 88 });
+  for (let slot = leftCount; slot >= 1; slot--) {
+    seats.push({ x: 18, y: 10 + 78 * slot / (leftCount + 1) });
+  }
+  return seats;
+}
+
+// Reveal new activity without interrupting a reader on unchanged timer snapshots.
+function setEgyptianWarTableText(element, text) {
+  const next = text ?? "";
+  if (element.textContent === next) return;
+  element.textContent = next;
+  findEgyptianWarElement(".egyptian-war-table-updates").scrollTop = 0;
+}
+
 function fitEgyptianWarTableContent() {
   const arena = egyptianWarArena;
   const info = findEgyptianWarElement(".egyptian-war-table-info");
@@ -278,7 +305,11 @@ function fitEgyptianWarTableContent() {
     } : box;
   });
   const centerX = bounds.left + bounds.width / 2;
-  let halfWidth = Math.min(bounds.width * 0.22, 200);
+  // A narrow center column clears the diagonal seats on shallow oval tables.
+  const shallowOval = bounds.height <= 220 && bounds.width >= bounds.height;
+  let halfWidth = shallowOval
+    ? Math.min(bounds.width * 0.12, 120)
+    : Math.min(bounds.width * 0.22, 200);
   for (const box of seats) {
     const offset = (box.left + box.right) / 2 - centerX;
     if (Math.abs(offset) < bounds.width * 0.24) continue;
@@ -796,7 +827,7 @@ function animateEgyptianWarOutcome(animation) {
       !animation.isFinalWin &&
       typeof animation.activityMessage === "string"
     ) {
-      egyptianWarMessage.textContent = animation.activityMessage;
+      setEgyptianWarTableText(egyptianWarMessage, animation.activityMessage);
     }
 
     if (animation.action === "slap") {
@@ -936,13 +967,13 @@ function renderEgyptianWarState(state) {
       (player) => player.id === state.challenge.responderId
     );
 
-    egyptianWarChallenge.textContent =
+    setEgyptianWarTableText(egyptianWarChallenge,
       `${challenger?.name ?? "A player"} challenged ` +
       `${responder?.name ?? "the next player"}: ` +
       `${state.challenge.attemptsRemaining} ` +
-      `${state.challenge.attemptsRemaining === 1 ? "attempt" : "attempts"} remaining.`;
+      `${state.challenge.attemptsRemaining === 1 ? "attempt" : "attempts"} remaining.`);
   } else {
-    egyptianWarChallenge.textContent = "";
+    setEgyptianWarTableText(egyptianWarChallenge, "");
   }
 
   const displayedPileCardCount = isShowingCollectedPile
@@ -1010,6 +1041,8 @@ function renderEgyptianWarState(state) {
   }
 
   const playerCount = state.players.length;
+  egyptianWarArena.dataset.playerCount = String(playerCount);
+  const rectangleSeats = egyptianWarRectangleSeats(playerCount);
 
   state.players.forEach((player, index) => {
     const angle = -Math.PI / 2 + (2 * Math.PI * index) / playerCount;
@@ -1028,13 +1061,13 @@ function renderEgyptianWarState(state) {
     const directionX = Math.cos(angle);
     const directionY = Math.sin(angle);
     seat.dataset.tableHalf = directionY > 0 ? "bottom" : "top";
-    // Project the same clockwise player order onto straight rectangular rails.
-    // Both positions are available to CSS, so resizing needs no state update.
-    const rectangleScale = Math.max(Math.abs(directionX), Math.abs(directionY));
+    // Keep equal-angle oval seating and separate flat-edge rectangle slots.
+    // Both positions remain available to CSS during live shape changes.
+    const rectangleSeat = rectangleSeats[index];
     seat.style.setProperty("--oval-seat-x", `${50 + directionX * 40}%`);
     seat.style.setProperty("--oval-seat-y", `${50 + directionY * 37}%`);
-    seat.style.setProperty("--rectangle-seat-x", `${50 + directionX / rectangleScale * 32}%`);
-    seat.style.setProperty("--rectangle-seat-y", `${49 + directionY / rectangleScale * 41}%`);
+    seat.style.setProperty("--rectangle-seat-x", `${rectangleSeat.x}%`);
+    seat.style.setProperty("--rectangle-seat-y", `${rectangleSeat.y}%`);
 
     if (isNewSeat) {
       seat.innerHTML = '<span class="player-avatar"></span><div class="egyptian-war-seat-details"><span class="player-name"></span><span class="egyptian-war-card-count"></span></div>';
@@ -1046,11 +1079,12 @@ function renderEgyptianWarState(state) {
     };
     setText(".player-avatar", player.avatar);
     setText(".player-name", player.name);
+    seat.querySelector(".player-name").title = player.name;
     setText(".egyptian-war-card-count", `${player.cardCount} ${player.cardCount === 1 ? "card" : "cards"}`);
     let eliminated = seat.querySelector(".egyptian-war-seat-details .badge");
     if (player.isEliminated && !eliminated) {
       eliminated = document.createElement("span");
-      eliminated.className = "badge text-bg-secondary";
+      eliminated.className = "badge text-bg-secondary egyptian-war-out-badge";
       eliminated.textContent = "Out";
       seat.querySelector(".egyptian-war-seat-details").appendChild(eliminated);
     } else if (!player.isEliminated) eliminated?.remove();
@@ -1122,11 +1156,11 @@ function renderEgyptianWarState(state) {
   });
 
   egyptianWarTopCard.hidden = visibleEgyptianWarCards.length > 0;
-  egyptianWarMessage.textContent = state.status === "finished"
+  setEgyptianWarTableText(egyptianWarMessage, state.status === "finished"
     ? ""
     : isWaitingForSlapWinnerReveal
       ? previousState?.activityMessage ?? ""
-      : state.activityMessage;
+      : state.activityMessage);
   egyptianWarPlayCardButton.disabled =
     (currentContext.role === "spectator") ||
     state.status !== "playing" ||
@@ -1219,34 +1253,40 @@ toggleSlapRulesButton.addEventListener("click", () => {
   saveLayoutPreferences();
 });
 async function playEgyptianWarCard() {
-  if (egyptianWarPlayCardButton.disabled) return;
-  const response = await currentContext?.submitAction({ type: "play-card" });
-  if (response && !response.success) currentContext.notify(response.message);
+  const context = currentContext;
+  if (!context || egyptianWarPlayCardButton.disabled) return;
+  const response = await context.submitAction({ type: "play-card" });
+  if (currentContext === context && response && !response.success) context.notify(response.message);
 }
 
 async function slapEgyptianWarPile() {
-  if (egyptianWarSlapButton.disabled) return;
-  const response = await currentContext?.submitAction({
+  const context = currentContext;
+  if (!context || egyptianWarSlapButton.disabled) return;
+  const response = await context.submitAction({
     type: "slap",
     payload: { pileVersion: previousEgyptianWarState?.pileVersion }
   });
-  if (response && !response.success) currentContext.notify(response.message);
+  if (currentContext === context && response && !response.success) context.notify(response.message);
 }
 
 egyptianWarPlayCardButton.addEventListener("click", playEgyptianWarCard);
 egyptianWarSlapButton.addEventListener("click", slapEgyptianWarPile);
 egyptianWarPauseButton.addEventListener("click", async () => {
-  if (!currentContext?.isHost) return;
+  const context = currentContext;
+  if (!context?.isHost) return;
   const isPaused = egyptianWarPauseButton.getAttribute("aria-pressed") !== "true";
-  const response = await currentContext.requestPause(isPaused);
-  if (!response.success) currentContext.notify(response.message);
+  const response = await context.requestPause(isPaused);
+  if (currentContext === context && !response.success) context.notify(response.message);
 });
 egyptianWarChatForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  const context = currentContext;
+  if (!context) return;
   const message = egyptianWarChatInput.value.trim();
-  const response = await currentContext.sendChat(message);
-  if (!response.success) currentContext.notify(response.message);
-  else egyptianWarChatInput.value = "";
+  const response = await context.sendChat(message);
+  if (currentContext !== context) return;
+  if (!response.success) context.notify(response.message);
+  else if (egyptianWarChatInput.value.trim() === message) egyptianWarChatInput.value = "";
 });
 showGameChatButton.addEventListener("click", () => showEgyptianWarSidePanel("chat"));
 showGameSpectatorsButton.addEventListener("click", () => showEgyptianWarSidePanel("spectators"));
@@ -1315,9 +1355,10 @@ findEgyptianWarElement(".egyptian-war-side-tabs").addEventListener("keydown", (e
 });
 findEgyptianWarElement("#show-game-scoreboard").addEventListener("click", () => showEgyptianWarSidePanel("scoreboard"));
 findEgyptianWarElement("#egyptian-war-reset-scores").addEventListener("click", async () => {
-  if (!currentContext?.isHost) return;
-  const result = await currentContext.resetScoreboard?.();
-  if (result && !result.success) currentContext.notify(result.message);
+  const context = currentContext;
+  if (!context?.isHost) return;
+  const result = await context.resetScoreboard?.();
+  if (currentContext === context && result && !result.success) context.notify(result.message);
 });
 
 const egyptianWarClientModule = {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Card } from "./definition.js";
+import { egyptianWar, type Card } from "./definition.js";
 import {
   applyEgyptianWarAction,
   createDeck,
@@ -381,7 +381,7 @@ test("public state includes recent face-up cards for reconnect snapshots", () =>
 test("rejects unsupported player lists and invalid randomness", () => {
   assert.throws(
     () => createEgyptianWarState(players.slice(0, 1), settings),
-    /between 2 and 6 players/
+    /between 2 and 8 players/
   );
 
   assert.throws(
@@ -1229,4 +1229,30 @@ test("public state does not expose slap-pattern flags", () => {
 
   assert.equal("isSlappable" in publicState, false);
   assert.equal("isSlapWindow" in publicState, false);
+});
+
+
+test("seven and eight players receive every card and take clockwise turns", () => {
+  assert.equal(egyptianWar.maxPlayers, 8);
+  for (const count of [7, 8]) {
+    const members = Array.from({ length: count }, (_, index) => ({
+      id: `player-${index}`, name: `Player ${index}`, avatar: "P"
+    }));
+    const state = createEgyptianWarState(members, settings, maximum => maximum - 1);
+    const dealt = state.players.flatMap(player => player.cards);
+    assert.equal(dealt.length, 54);
+    assert.equal(new Set(dealt.map(card => card.id)).size, 54);
+    const sizes = state.players.map(player => player.cards.length);
+    assert.ok(Math.max(...sizes) - Math.min(...sizes) <= 1);
+    for (const player of state.players) player.cards = [card("2", player.id), card("3", `${player.id}-next`)];
+    state.totalCardCount = count * 2;
+    for (let index = 0; index < count; index++) {
+      const current = state.currentPlayerIndex;
+      applyEgyptianWarAction(state, state.players[current].id, "play-card");
+      assert.equal(state.currentPlayerIndex, (current + 1) % count);
+    }
+  }
+  assert.throws(() => createEgyptianWarState(Array.from({ length: 9 }, (_, index) => ({
+    id: String(index), name: String(index), avatar: "P"
+  })), settings), /between 2 and 8 players/);
 });

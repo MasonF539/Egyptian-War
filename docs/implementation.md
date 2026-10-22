@@ -55,10 +55,12 @@ GameHub awards wins on completion. Losing contenders in a valid slap race and
 ignored or rejected attempts do not count as false slaps. Rows sort by wins,
 then successful slaps, then fewer false slaps, then player name.
 
-The browser calls the optional `context.resetScoreboard` service. Its reset
-handler must ignore failures received after the context has been destroyed or
-replaced. Confirmation and cancellation belong to the platform service described
-in GameHub's architecture guide.
+The browser calls the optional `context.resetScoreboard` service. Asynchronous
+play, slap, pause, kick, chat, and score-reset handlers capture their mount context
+and ignore replies after that context has been destroyed or replaced. A successful
+chat reply clears the draft only if the user has not changed it while waiting.
+Score-reset confirmation and cancellation belong to the platform service
+described in GameHub's architecture guide.
 
 ## Timing and verification reference
 
@@ -80,3 +82,49 @@ Engine, arbitration, and session tests live beside their TypeScript sources;
 registration. The package supports `npm run check`, `npm test`, and `npm run build`.
 GameHub separately tests plugin loading, room permissions, reconnection, presets,
 and score transport. Automated checks do not replace multiplayer/device testing.
+
+## Player capacity and seating
+
+The definition and engine accept 2-8 players. All cards are dealt round-robin,
+so hand sizes differ by at most one card when the deck does not divide evenly.
+
+The browser keeps equal-angle coordinates for the oval and separate rectangle
+coordinates, selected by the board's aspect-ratio container query. Rectangle
+slots run clockwise from the centered top seat, down the right edge, through
+the centered bottom seat, and up the left edge. At eight players, each long
+edge has three seats. Side slots avoid rounded corners. Long names truncate
+visually while retaining their text and a title; dense oval seating uses smaller
+seat surfaces to prevent overlap without changing its angles. Both coordinate
+sets are available during resizing without waiting for another server snapshot.
+
+
+## Responsive content and accepted limits
+
+`fitEgyptianWarTableContent` measures seats and their disconnect controls to
+bound the center content. Elimination badges overlay avatars, so becoming Out
+does not change seat geometry. A stable grid separates the pile label, card
+stack, and scrollable activity. New activity or challenge text resets scrolling;
+identical snapshots preserve the reader's position, including timer updates.
+Delayed slap-result messages use the same text-update helper.
+
+For oval boards no taller than 220 CSS pixels, the center is narrower and uses
+columns for the card and activity. Landscape viewports no taller than 500 pixels
+also reduce the title's top margin gradually and share the turn row with offline
+status. Rules initially collapse in short landscape, while saved preferences
+remain authoritative. Side-panel width includes clearance for its external tools
+when the panel and action buttons share the bottom row.
+
+Several disconnect controls can still leave too little readable center space on
+very short screens. For example, eight players with the top and bottom seats
+disconnected at 740 by 360 pixels still produce a very small pile. This is an
+accepted layout limit rather than a guarantee covered by the normal-size checks.
+
+Recent verification includes browser checks of two through eight seats, live
+aspect-ratio changes, stable activity/card placement, panel-tool clearance, and
+late action replies after unmount. The host also verifies that a fresh production
+install applies the package patch and matches the current runtime files. These
+browser checks use desktop emulation, not physical mobile-device testing.
+
+Rejected player removals preserve the running turn deadline. The session suspends
+its timer only after the engine accepts a departure; invalid or already-departed
+player IDs cannot stall the remaining players' turns.

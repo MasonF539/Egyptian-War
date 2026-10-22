@@ -12,7 +12,7 @@ A successful slap wins the pile and can bring a player with no cards back into
 the game. False slaps carry penalties.
 
 - Game name: Egyptian War
-- Number of players: 2-6
+- Number of players: 2-8
 - Typical game length: Not yet measured; varies with players, decks, and rules.
 - Player objective: Win piles and collect every card.
 - Winning condition: One player collects all cards after any remaining valid
@@ -135,12 +135,17 @@ their connection status.
 The usable board area sits above the turn label, timer, and action buttons. Its
 own aspect ratio chooses a tall, rounded rectangular pool-table shape without
 pockets when taller than wide, and the oval table when wider than tall. Player
-seats follow the shape; the title stays at the top and the action controls remain
-below the arena. Size changes respond to available width and height.
+seats use equal angles around the oval. The rectangle keeps one seat centered
+on each short end and distributes the others along its flat long sides (three
+on each side with eight players), keeping
+clockwise turn order and leaving corners clear. The title stays at the top and
+the action controls remain below the arena. Size changes respond to available width and height.
 
 Slap Rules stays in the upper-left corner and remembers its collapsed state.
 Narrow screens initially collapse the rules and minimize the side panel when no
-saved layout preference exists. Opening the panel restores its saved size.
+saved layout preference exists. Short landscape screens also start with the
+rules collapsed unless a saved preference overrides that choice. Opening the
+panel restores its saved size.
 The turn label uses fixed-height space above the timer, aligns to the timer's
 right edge, and remains an `aria-live` region. It says "It's your turn" for the
 local player and names the current player for other viewers.
@@ -149,8 +154,20 @@ The default controls are E for Play a Card and Space for Slap. Keyboard users
 see keycap hints that follow their chosen bindings; touch users keep the
 tap-oriented subtitle.
 The side panel overlays part of the play area, with its controls on an external
-side extension. Long activity text scrolls within its reserved area so it does
-not cover player seats.
+side extension. On portrait phones, the open panel overlays only the board area,
+keeping the turn label, timer, and action buttons accessible. Opening or expanding
+the panel keeps those controls at the same size when it sits above them. The
+pile count, card stack, and activity messages use stable spaces: long messages
+scroll without moving or resizing the cards or covering player seats. New
+activity returns its scroll area to the top; unchanged timer updates preserve
+manual scrolling. Elimination badges do not change seat height.
+
+On short oval tables, activity sits beside the card stack and the header uses
+less vertical space. When the side panel sits beside the actions, its width
+reserves room for the external tool buttons. At extremely small sizes, several
+disconnect labels can still reduce the center space substantially. That crowding
+is an accepted limit for now; the layout does not promise readable cards in
+every combination of viewport size and disconnected seats.
 
 ## Slap timing and action pacing
 
@@ -179,7 +196,7 @@ and playtest findings are recorded separately.
 
 ### Existing configuration
 
-- [x] Support 2–6 players in the game definition.
+- [x] Support 2–8 players in the game definition.
 - [x] Define standard cards and optional Jokers.
 - [x] Configure one, two, or three complete decks, defaulting to one; include two Jokers per deck when Jokers are enabled.
 - [x] Configure Jokers, doubles, sandwiches, three in a row, top-bottom, adjacent-card tens, and marriage as lobby settings.

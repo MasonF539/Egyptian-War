@@ -554,3 +554,20 @@ test("disconnect deadlines stay stable and server-resolved slaps report statisti
     assert.equal((session.getLifecycleState() as unknown as typeof first).disconnections[0].autoPlaying, true);
   } finally { session.dispose(); }
 });
+
+
+test("a rejected removal preserves the running turn deadline", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const { session } = makeSession(3, { turnTimerSeconds: 15 });
+  try {
+    const current = internals(session).state.players[internals(session).state.currentPlayerIndex];
+    const count = current.cards.length;
+    session.start?.();
+    t.mock.timers.tick(5_000);
+    assert.equal(session.memberRemoved?.("already-left", { voluntary: true }).success, false);
+    t.mock.timers.tick(9_999);
+    assert.equal(current.cards.length, count);
+    t.mock.timers.tick(1);
+    assert.equal(current.cards.length, count - 1);
+  } finally { session.dispose(); }
+});

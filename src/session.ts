@@ -323,7 +323,6 @@ class EgyptianWarSession implements GameSession {
       return { success: false, message: "Only disconnected players can be kicked during a game." };
     }
     const currentBefore = this.state.players[this.state.currentPlayerIndex]?.id ?? null;
-    if (this.turnTimer !== null) this.suspendTurnTimer();
     try {
       removeEgyptianWarPlayer(
         this.state,
@@ -338,6 +337,7 @@ class EgyptianWarSession implements GameSession {
           : "Unable to remove that player from the game."
       };
     }
+    if (this.turnTimer !== null) this.suspendTurnTimer();
     if (this.reconnectGracePlayerId === memberId) this.reconnectGracePlayerId = null;
     this.clearOfflineMember(memberId);
     if (this.disconnectPausedPlayerId === memberId) {

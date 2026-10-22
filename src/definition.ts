@@ -55,7 +55,7 @@ export const egyptianWar: GameDefinition & { displayOptions: typeof egyptianWarD
   chatEnabled: true,
 
   minPlayers: 2,
-  maxPlayers: 6,
+  maxPlayers: 8,
 
   preview: {
     videoPath: "/games/egyptian-war/assets/game-previews/preview.mp4",

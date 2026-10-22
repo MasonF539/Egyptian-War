@@ -366,7 +366,7 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   pointer-events: none;
 }
 
-/* The measured end and side seats bound this central area. */
+/* The measured seats bound a stable label, card, and message grid. */
 .egyptian-war-table-info {
   position: absolute;
   z-index: 1;
@@ -374,9 +374,9 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   top: 22%;
   bottom: 22%;
   transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  display: grid;
+  grid-template-rows: auto minmax(0, 4fr) minmax(0, 1fr);
+  gap: clamp(0.1rem, 1cqh, 0.35rem);
   width: min(44%, 25rem);
   padding: 0;
   container-type: size;
@@ -391,12 +391,10 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
 
 .egyptian-war-table-info > p,
 .egyptian-war-table-updates > p {
-  flex-shrink: 0;
   font-size: clamp(0.625rem, min(6cqh, 8cqw), 0.95rem);
   line-height: 1.3;
 }
 .egyptian-war-table-updates {
-  flex: 0 1 auto;
   min-height: 0;
   overflow: auto;
   overflow-wrap: anywhere;
@@ -408,15 +406,25 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
 }
 .egyptian-war-challenge:empty { display: none; }
 .egyptian-war-table-info .egyptian-war-message { min-height: 0; }
+.egyptian-war-table-info .egyptian-war-pile-label {
+  align-self: center;
+  min-height: 0;
+  margin: 0 !important;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: clamp(0.5rem, min(6cqh, 6cqw), 0.95rem);
+}
 
 .egyptian-war-pile-stack {
   position: relative;
   width: 100%;
-  flex: 1 0 min(5.5rem, 55cqh);
-  min-height: min(5.5rem, 55cqh);
+  min-height: 0;
+  height: 100%;
   max-height: 13rem;
+  align-self: center;
   container-type: size;
-  margin: 0 auto 0.35rem;
+  margin: 0 auto;
 }
 
 .egyptian-war-empty-pile {
@@ -724,6 +732,15 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
 .egyptian-war-seat.is-eliminated {
   opacity: 0.58;
   filter: grayscale(0.75);
+}
+
+/* Overlay the avatar so elimination never changes the seat or pile geometry. */
+.egyptian-war-out-badge {
+  position: absolute;
+  left: 0.3rem;
+  bottom: 0.15rem;
+  font-size: 0.55rem;
+  pointer-events: none;
 }
 
 .egyptian-war-seat.is-disconnected {
@@ -1754,4 +1771,103 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
 @container egyptian-war-panel (max-width: 340px) {
   .egyptian-war-side-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.15rem; }
   .egyptian-war-side-tabs .btn { font-size: 0.55rem; padding-inline: 0.05rem; }
+}
+
+/* On portrait phones, overlay the board rather than the turn and action row. */
+@media (max-width: 600px) and (orientation: portrait) {
+  .egyptian-war-play-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+  }
+
+  .egyptian-war-board-column { display: contents; }
+  .egyptian-war-arena { grid-area: 1 / 1; }
+  .egyptian-war-action-area {
+    grid-area: 2 / 1;
+    justify-self: end;
+    /* The panel is above this row, so reserve only the collapsed bubble space. */
+    width: min(44rem, calc(100% - 5rem));
+  }
+
+  .egyptian-war-side-panel {
+    position: relative;
+    grid-area: 1 / 1;
+    align-self: end;
+    left: auto;
+    width: calc(100% - 3.25rem);
+    max-width: none;
+    max-height: 100%;
+    margin-left: 0.5rem;
+  }
+
+  .egyptian-war-side-panel.is-expanded { height: 100%; }
+  .egyptian-war-side-tabs .btn { font-size: 0.68rem; padding-inline: 0.1rem; }
+}
+
+/* Keep long names on one line so extra seats do not grow into each other. */
+.egyptian-war-seat .player-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Seven/eight seats keep their oval angles, using smaller cards when crowded. */
+@container egyptian-war-board (aspect-ratio >= 1) {
+  .egyptian-war-arena:is([data-player-count="7"], [data-player-count="8"]) .egyptian-war-seat {
+    width: clamp(5.5rem, 16cqw, 10.5rem);
+    gap: 0.3rem;
+    padding: 0.2rem 0.35rem;
+  }
+
+  .egyptian-war-arena:is([data-player-count="7"], [data-player-count="8"]) .egyptian-war-seat .player-avatar {
+    width: clamp(1.4rem, min(4cqw, 10cqh), 2.5rem);
+    height: clamp(1.4rem, min(4cqw, 10cqh), 2.5rem);
+    flex-basis: clamp(1.4rem, min(4cqw, 10cqh), 2.5rem);
+    font-size: clamp(1rem, min(3cqw, 8cqh), 1.75rem);
+  }
+}
+
+
+/* Use the center's width for activity instead of stacking everything in its height. */
+@container egyptian-war-board (max-height: 220px) and (aspect-ratio >= 1) {
+  .egyptian-war-table-info {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: 0.4rem;
+  }
+  .egyptian-war-pile-stack { grid-area: 1 / 1 / 3 / 2; }
+  .egyptian-war-table-info .egyptian-war-pile-label {
+    grid-area: 1 / 2;
+    white-space: normal;
+    font-size: 0.625rem;
+  }
+  .egyptian-war-table-updates { grid-area: 2 / 2; }
+  .egyptian-war-table-updates > p { font-size: 0.625rem; line-height: 1.2; }
+}
+
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .egyptian-war-game-panel > .card-title {
+    /* Recover board height gradually while keeping the heading in the top row. */
+    margin-top: clamp(0.5rem, calc(32vh - 7.3rem), 2.75rem);
+  }
+  .egyptian-war-offline-status {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 45%;
+    margin: 0;
+    text-align: left;
+  }
+  .egyptian-war-turn-inline { padding-left: 47%; }
+}
+
+
+/* Reserve the tool extension as well as the panel beside the action buttons. */
+@media (min-width: 600.01px), (orientation: landscape) {
+  .egyptian-war-side-panel {
+    max-width: max(0px, calc(100% - clamp(16rem, 52%, 44rem) - 4rem));
+  }
 }

@@ -7,28 +7,37 @@ const { JSDOM } = require("jsdom");
 const gameDirectory = path.resolve(__dirname, "..");
 const storageKey = "egyptian-war:layout";
 
-function mountClient({ narrow = false, saved, blockedStorage = false, input, display, host = false } = {}) {
+function mountClient({ narrow = false, shortLandscape = false, saved, blockedStorage = false, input, display, host = false, actions = {}, resetScoreboard = async () => ({ success: true }) } = {}) {
   const dom = new JSDOM(readFileSync(path.join(gameDirectory, "public/template.html"), "utf8"), {
     url: "http://localhost", runScripts: "outside-only"
   });
   const { window } = dom;
-  window.matchMedia = () => ({ matches: narrow });
+  window.matchMedia = (query) => ({ matches: narrow || (shortLandscape && query.includes("orientation: landscape")) });
   if (saved !== undefined) window.localStorage.setItem(storageKey, saved);
   if (blockedStorage) {
     Object.defineProperty(window, "localStorage", { get() { throw new Error("Storage disabled"); } });
   }
   let gameModule;
+  let resetHandler;
+  const resetButton = window.document.getElementById("egyptian-war-reset-scores");
+  const addResetListener = resetButton.addEventListener.bind(resetButton);
+  resetButton.addEventListener = (type, handler, ...options) => {
+    if (type === "click") resetHandler = handler;
+    addResetListener(type, handler, ...options);
+  };
   window.GameHubRegisterGameClientModule = (_id, module) => { gameModule = module; };
   window.eval(readFileSync(path.join(gameDirectory, "public/client.js"), "utf8"));
   const instance = gameModule.mount({
     root: window.document.body, input, display,
     memberId: "me", get isHost() { return host; }, role: "player",
-    resetScoreboard: async () => ({ success: true }),
+    resetScoreboard,
     launchData: { settings: {}, chatEnabled: true },
-    audio: { setScene() {}, playEffect() {} }
+    audio: { setScene() {}, playEffect() {} },
+    ...actions
   });
   return {
     window, instance,
+    resetScores: () => resetHandler(),
     setHost(value) { host = value; },
     el: (id) => window.document.getElementById(id),
     saved: () => window.localStorage.getItem(storageKey),
@@ -228,3 +237,135 @@ test("scoreboard tab, reconnect countdowns and live host controls remain usable"
     assert.equal(view.el("egyptian-war-reset-scores").hidden, true);
   } finally { view.close(); }
 });
+
+
+test("a failed reset reply after unmount does not notify through a destroyed context", async () => {
+  let finishReset;
+  const view = mountClient({ host: true, resetScoreboard: () => new Promise(resolve => { finishReset = resolve; }) });
+  const pending = view.resetScores();
+  view.instance.destroy();
+  finishReset({ success: false, message: "Room closed" });
+  try { await assert.doesNotReject(pending); }
+  finally { view.window.close(); }
+});
+
+
+test("eight seats use flat rectangle edges in clockwise order and retain equal oval angles", () => {
+  const view = mountClient();
+  const state = {
+    status: "playing", players: Array.from({ length: 8 }, (_, index) => ({
+      id: `p${index}`, name: `Player ${index}`, avatar: "P", isConnected: true, cardCount: 7
+    })), currentPlayerId: "p0", recentCards: [], winnerId: null,
+    isPaused: false, isAnimating: false, turnTimerSeconds: 15,
+    turnTimeRemainingMs: 15000, challenge: null, pileCardCount: 0,
+    hasFaceUpCards: false, activityMessage: "", canPlayCard: false
+  };
+  try {
+    for (let count = 2; count <= 8; count++) {
+      view.instance.receiveState({ ...state, players: state.players.slice(0, count) });
+      const seats = [...view.el("egyptian-war-players").children];
+      const position = seat => ({
+        x: parseFloat(seat.style.getPropertyValue("--rectangle-seat-x")),
+        y: parseFloat(seat.style.getPropertyValue("--rectangle-seat-y"))
+      });
+      const rectangle = seats.map(position);
+      assert.equal(rectangle.filter(point => point.x === 50 && point.y === 10).length, 1);
+      assert.equal(rectangle.filter(point => point.x === 50 && point.y === 88).length, 1);
+      assert.equal(rectangle.filter(point => point.x !== 50).length, count - 2);
+      for (const point of rectangle.filter(point => point.x !== 50)) {
+        assert.ok(point.x === 18 || point.x === 82);
+        assert.ok(point.y > 10 && point.y < 88, "Side seats must avoid corners");
+      }
+      const right = rectangle.filter(point => point.x === 82);
+      const left = rectangle.filter(point => point.x === 18);
+      assert.deepEqual(right.map(point => point.y), right.map(point => point.y).sort((a, b) => a - b));
+      assert.deepEqual(left.map(point => point.y), left.map(point => point.y).sort((a, b) => b - a));
+      if (count === 8) { assert.equal(right.length, 3); assert.equal(left.length, 3); }
+      const angles = seats.map(seat => Math.atan2(
+        (parseFloat(seat.style.getPropertyValue("--oval-seat-y")) - 50) / 37,
+        (parseFloat(seat.style.getPropertyValue("--oval-seat-x")) - 50) / 40
+      ));
+      for (let index = 0; index < count; index++) {
+        const gap = (angles[(index + 1) % count] - angles[index] + 2 * Math.PI) % (2 * Math.PI);
+        assert.ok(Math.abs(gap - 2 * Math.PI / count) < 1e-10);
+      }
+    }
+  } finally { view.close(); }
+});
+
+
+test("new activity and challenges reset scrolling while unchanged snapshots preserve it", () => {
+  const view = mountClient();
+  const state = { status: "playing", players: [
+    { id: "me", name: "Me", avatar: "M", isConnected: true, cardCount: 26 },
+    { id: "guest", name: "Guest", avatar: "G", isConnected: true, cardCount: 26 }
+  ], currentPlayerId: "me", recentCards: [], winnerId: null, isPaused: false,
+    isAnimating: false, turnTimerSeconds: 15, turnTimeRemainingMs: 15000,
+    challenge: null, pileCardCount: 0, hasFaceUpCards: false,
+    activityMessage: "Previous activity", canPlayCard: true };
+  try {
+    const updates = view.window.document.querySelector(".egyptian-war-table-updates");
+    view.instance.receiveState(state);
+    updates.scrollTop = 30;
+    view.instance.receiveState({ ...state, turnTimeRemainingMs: 14000 });
+    assert.equal(updates.scrollTop, 30);
+    view.instance.receiveState({ ...state, activityMessage: "New activity" });
+    assert.equal(updates.scrollTop, 0);
+    updates.scrollTop = 30;
+    const challenge = { challengerId: "me", responderId: "guest", attemptsRemaining: 2 };
+    view.instance.receiveState({ ...state, activityMessage: "New activity", challenge });
+    assert.equal(updates.scrollTop, 0);
+    updates.scrollTop = 30;
+    view.instance.receiveState({ ...state, activityMessage: "New activity", challenge });
+    assert.equal(updates.scrollTop, 30);
+  } finally { view.close(); }
+});
+
+
+test("short landscape starts rules collapsed while respecting an explicit saved choice", () => {
+  for (const saved of [undefined, JSON.stringify({ rulesExpanded: true })]) {
+    const view = mountClient({ shortLandscape: true, saved });
+    try {
+      assert.equal(view.el("toggle-slap-rules").getAttribute("aria-expanded"), String(saved !== undefined));
+    } finally { view.close(); }
+  }
+});
+
+
+for (const action of ["play", "slap", "pause", "kick", "chat"]) {
+  test(`a delayed ${action} reply is ignored after the game unmounts`, async () => {
+    let resolve;
+    const pending = new Promise(done => { resolve = done; });
+    const notices = [];
+    const view = mountClient({ host: true, actions: {
+      submitAction: () => pending, requestPause: () => pending,
+      removeMember: () => pending, sendChat: () => pending,
+      notify: message => notices.push(message)
+    } });
+    const state = { status: "playing", players: [
+      { id: "me", name: "Me", avatar: "M", isConnected: true, cardCount: 26 },
+      { id: "guest", name: "Guest", avatar: "G", isConnected: false, cardCount: 26 }
+    ], currentPlayerId: "me", recentCards: [], winnerId: null, isPaused: false,
+      isAnimating: false, turnTimerSeconds: 15, turnTimeRemainingMs: 15000,
+      challenge: null, pileCardCount: 1, hasFaceUpCards: true,
+      activityMessage: "", canPlayCard: true };
+    try {
+      view.instance.receiveState(state);
+      if (action === "chat") {
+        view.el("egyptian-war-chat-input").value = "Previous game";
+        view.el("egyptian-war-chat-form").dispatchEvent(new view.window.Event("submit", { cancelable: true }));
+      } else if (action === "kick") {
+        view.window.document.querySelector('[aria-label="Kick Guest"]').click();
+      } else {
+        const id = { play: "play-card", slap: "slap", pause: "pause" }[action];
+        const button = view.el(`egyptian-war-${id}`);
+        assert.equal(button.disabled, false);
+        button.click();
+      }
+      view.instance.destroy();
+      resolve({ success: false, message: "Old response" });
+      await new Promise(done => setImmediate(done));
+      assert.deepEqual(notices, []);
+    } finally { view.close(); }
+  });
+}

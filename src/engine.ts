@@ -183,8 +183,8 @@ export function createEgyptianWarState(
   settings: EgyptianWarSettings,
   randomInteger: RandomInteger = randomInt
 ): EgyptianWarState {
-  if (playerInputs.length < 2 || playerInputs.length > 6) {
-    throw new RangeError("Egyptian War requires between 2 and 6 players.");
+  if (playerInputs.length < 2 || playerInputs.length > 8) {
+    throw new RangeError("Egyptian War requires between 2 and 8 players.");
   }
 
   const playerIds = new Set(playerInputs.map((player) => player.id));
