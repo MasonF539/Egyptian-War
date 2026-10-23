@@ -571,3 +571,54 @@ test("a rejected removal preserves the running turn deadline", (t) => {
     assert.equal(current.cards.length, count - 1);
   } finally { session.dispose(); }
 });
+
+
+for (const removedId of ["host", "third"]) {
+  test(`removing ${removedId === "host" ? "the challenger starts a fresh turn" : "an unrelated player preserves the challenge deadline"}`, (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+    const { session } = makeSession(3, { turnTimerSeconds: 15 });
+    try {
+      deal(session, [
+        [card("2", "h2"), card("3", "h3")],
+        [card("4", "g4"), card("5", "g5")],
+        [card("6", "t6"), card("7", "t7")]
+      ], [card("queen", "pq")]);
+      const state = internals(session).state;
+      state.currentPlayerIndex = 1;
+      state.challenge = { challengerId: "host", responderId: "guest", attemptsRemaining: 2 };
+      session.start?.();
+      t.mock.timers.tick(14_000);
+      assert.equal(session.memberRemoved?.(removedId, { voluntary: true }).success, true);
+      assert.equal(state.players[state.currentPlayerIndex].id, "guest");
+      const snapshot = session.getPublicState({ memberId: "guest", role: "player" }) as PublicEgyptianWarState;
+      assert.equal(snapshot.turnTimeRemainingMs, removedId === "host" ? 15_000 : 1_000);
+    } finally { session.dispose(); }
+  });
+}
+
+
+for (const recovery of ["reconnect", "deadline"]) {
+  test(`a host's early resume stays reflected in ${recovery} messages with another player offline`, (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+    const { session, members } = makeSession();
+    try {
+      session.start?.();
+      members[0].isConnected = false;
+      session.memberDisconnected?.("host");
+      t.mock.timers.tick(30_000);
+      members[1].isConnected = false;
+      session.memberDisconnected?.("guest");
+      session.resume?.();
+      if (recovery === "reconnect") {
+        members[0].isConnected = true;
+        session.memberReconnected?.("host");
+      } else {
+        t.mock.timers.tick(30_000);
+      }
+      const snapshot = session.getPublicState({ memberId: "third", role: "player" }) as PublicEgyptianWarState;
+      assert.equal(snapshot.isPaused, false);
+      assert.match(snapshot.activityMessage, /game is continuing/i);
+      assert.equal(snapshot.pauseMessage, null);
+    } finally { session.dispose(); }
+  });
+}

@@ -166,6 +166,11 @@ test("turn announcements distinguish your turn, another player, pause, and compl
     const turn = view.el("egyptian-war-turn");
     view.instance.receiveState(state);
     assert.equal(turn.textContent, "It's your turn");
+    const announcements = new view.window.MutationObserver(() => {});
+    announcements.observe(turn, { childList: true, characterData: true, subtree: true });
+    view.instance.receiveState({ ...state, turnTimeRemainingMs: 14000 });
+    assert.equal(announcements.takeRecords().length, 0, "An unchanged turn must not rewrite its live announcement");
+    announcements.disconnect();
     view.instance.receiveState({ ...state, currentPlayerId: "guest" });
     assert.equal(turn.textContent, "Guest's turn");
     view.instance.receiveState({ ...state, isPaused: true, pauseMessage: "Waiting for Guest to reconnect" });

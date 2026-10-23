@@ -128,3 +128,28 @@ browser checks use desktop emulation, not physical mobile-device testing.
 Rejected player removals preserve the running turn deadline. The session suspends
 its timer only after the engine accepts a departure; invalid or already-departed
 player IDs cannot stall the remaining players' turns.
+
+A departure that awards the pile starts a full new turn even if its winner was
+already the current player. The session detects the changed pile version as well
+as a changed current player; unrelated departures retain the existing countdown.
+Regression coverage includes a challenger leaving with one second remaining.
+
+Disconnect recovery messages follow the actual pause state. If the host resumes
+while multiple players are offline, a reconnect or an individual autoplay deadline
+must not announce that the running game is paused. Running snapshots have no
+pause message; manually paused games retain their waiting/resume guidance.
+
+A live installed-package Edge match completed in 95 moves using a laptop keyboard
+and phone-sized button controls. Settled snapshots conserved all 54 cards, and
+the winner/game-ended path completed without browser script errors. This is one
+emulated match rather than physical-device or comprehensive audio coverage.
+
+Unmounting discards the transient chat input draft. Reusing the same page for a
+new room must not expose an unsent message addressed to the previous room. Live
+server history and browser-local display/rule preferences use separate storage
+and are unaffected by clearing this input.
+
+The polite, atomic turn live region changes its text only when the announcement
+changes. Timer-only snapshots no longer replace the same text node and generate
+redundant live-region mutations. MutationObserver regression coverage preserves
+real turn/pause/winner updates; physical screen-reader output is not tested.

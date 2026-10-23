@@ -160,11 +160,9 @@ class EgyptianWarSession implements GameSession {
       this.isAnimating,
       this.turnDurationMs / 1000,
       this.getTurnTimeRemainingMs(),
-      this.disconnectPausedPlayerId !== null
+      !this.isPaused ? null : this.disconnectPausedPlayerId !== null
         ? "A player disconnected; the host may resume the game."
-        : this.isPaused
-          ? "Game paused by the host."
-          : null,
+        : "Game paused by the host.",
       connectedIds
     ), offlinePlayers: this.getOfflinePlayers(), serverNow: this.context.now() };
   }
@@ -240,7 +238,9 @@ class EgyptianWarSession implements GameSession {
           }
         }
         this.state.activityMessage = waiting
-          ? `Waiting for ${waiting.name} to reconnect before continuing.`
+          ? this.isPaused
+            ? `Waiting for ${waiting.name} to reconnect before continuing.`
+            : `Offline auto-play is ready. The game is continuing while ${waiting.name} is disconnected.`
           : this.isPaused
             ? "Offline auto-play is ready. The host has kept the game paused."
             : "Offline players' turns will be played automatically.";
@@ -285,11 +285,11 @@ class EgyptianWarSession implements GameSession {
         this.isPaused = this.wasPausedBeforeDisconnect;
         this.wasPausedBeforeDisconnect = false;
       }
-      this.state.activityMessage = this.disconnectPausedPlayerId !== null
-        ? `${player?.name ?? "A player"} reconnected. The game remains paused until the other player returns.`
-        : this.isPaused
-          ? `${player?.name ?? "A player"} reconnected. The host can resume the game.`
-          : `${player?.name ?? "A player"} reconnected. The game is continuing.`;
+      this.state.activityMessage = this.isPaused
+        ? this.disconnectPausedPlayerId !== null
+          ? `${player?.name ?? "A player"} reconnected. The game remains paused until the other player returns.`
+          : `${player?.name ?? "A player"} reconnected. The host can resume the game.`
+        : `${player?.name ?? "A player"} reconnected. The game is continuing.`;
     }
     const currentPlayer = this.state.players[this.state.currentPlayerIndex];
     if (this.state.status === "playing" && currentPlayer?.id === memberId) {
@@ -323,6 +323,7 @@ class EgyptianWarSession implements GameSession {
       return { success: false, message: "Only disconnected players can be kicked during a game." };
     }
     const currentBefore = this.state.players[this.state.currentPlayerIndex]?.id ?? null;
+    const pileVersionBefore = this.state.pileVersion;
     try {
       removeEgyptianWarPlayer(
         this.state,
@@ -354,7 +355,9 @@ class EgyptianWarSession implements GameSession {
       }
     }
     const currentAfter = this.state.players[this.state.currentPlayerIndex]?.id ?? null;
-    if (currentBefore !== currentAfter) {
+    // A departure can award the pile without changing the current player.
+    // That starts a new turn; an unrelated departure keeps the old deadline.
+    if (currentBefore !== currentAfter || this.state.pileVersion !== pileVersionBefore) {
       this.turnTimeRemainingMs = null;
       this.reconnectGraceUsedThisTurn = false;
     }

@@ -346,6 +346,7 @@ function destroyEgyptianWarGame() {
   egyptianWarTimerRemainingMs = null;
   egyptianWarTimerDeadline = null;
   egyptianWarChat.hidden = true;
+  egyptianWarChatInput.value = "";
   egyptianWarHostControls.classList.add("d-none");
 }
 
@@ -949,7 +950,7 @@ function renderEgyptianWarState(state) {
 
   updateEgyptianWarTurnTimer(state);
 
-  egyptianWarTurn.textContent = state.isPaused
+  const turnText = state.isPaused
     ? state.pauseMessage ?? "Game is paused"
     : winner
       ? `${winner.name} wins!`
@@ -958,6 +959,7 @@ function renderEgyptianWarState(state) {
           ? "It's your turn"
           : `${currentPlayer.name}'s turn`
         : "Game complete";
+  if (egyptianWarTurn.textContent !== turnText) egyptianWarTurn.textContent = turnText;
 
   if (state.challenge) {
     const challenger = state.players.find(
