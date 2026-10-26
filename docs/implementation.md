@@ -80,6 +80,18 @@ authoritative decision rules.
 Engine, arbitration, and session tests live beside their TypeScript sources;
 `test/` covers browser animation, panel/layout preferences, styles, and audio
 registration. The package supports `npm run check`, `npm test`, and `npm run build`.
+The [GitHub Actions workflow](../.github/workflows/verify.yml) runs on branch
+pushes and pull requests using Node.js 24. It installs locked dependencies with
+`npm ci`, runs type checks and tests, and checks the package with
+`npm pack --dry-run` (which builds through `prepack`). It does not publish or
+deploy the game.
+Development checks need a Node version supported by the locked jsdom dependency:
+22.22.2+ in Node 22, 24.15.0+ in Node 24, or Node 26+. The workflow uses Node 24.
+This test-tool requirement does not change the game's declared Node >=20 runtime.
+
+The development lockfile resolves jsdom's undici dependency to 8.12.3 to avoid
+known advisories affecting earlier versions. This test-only update changes no
+gameplay runtime files or published dependency declarations.
 GameHub separately tests plugin loading, room permissions, reconnection, presets,
 and score transport. Automated checks do not replace multiplayer/device testing.
 
@@ -153,3 +165,9 @@ The polite, atomic turn live region changes its text only when the announcement
 changes. Timer-only snapshots no longer replace the same text node and generate
 redundant live-region mutations. MutationObserver regression coverage preserves
 real turn/pause/winner updates; physical screen-reader output is not tested.
+
+
+The verification workflow commands also pass in a clean Linux Node 24 container:
+fresh registry installation, type checks, all 95 tests, and the package dry-run.
+The source mount is read-only; generated files remain inside the disposable
+container. This is local Linux verification, not a GitHub-hosted Actions result.
