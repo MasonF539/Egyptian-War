@@ -98,6 +98,7 @@ let revealedEgyptianWarWinnerAnimationId = null;
 let egyptianWarTimerDurationMs = 15000;
 let egyptianWarTimerRemainingMs = null;
 let egyptianWarTimerDeadline = null;
+let egyptianWarTimerAnimation = null;
 let egyptianWarInputUnsubscribers = [];
 
 function getAudio() {
@@ -177,6 +178,10 @@ function renderEgyptianWarSlapRules(settings) {
 }
 
 function setEgyptianWarTimerHidden(isHidden) {
+  if (isHidden) {
+    egyptianWarTimerAnimation?.cancel();
+    egyptianWarTimerAnimation = null;
+  }
   egyptianWarTurnTimer.classList.toggle("is-hidden", isHidden);
   egyptianWarTurnTimer.setAttribute(
     "aria-hidden",
@@ -228,10 +233,18 @@ function renderEgyptianWarTurnTimer() {
     : 0;
   const secondsRemaining = Math.ceil(remainingMs / 1000);
 
-  egyptianWarTurnTimerBar.style.width = `${percentRemaining}%`;
-  egyptianWarTurnTimerValue.textContent = `${secondsRemaining}s`;
+  if (!egyptianWarTimerAnimation) {
+    egyptianWarTurnTimerBar.style.transform = `scaleX(${percentRemaining / 100})`;
+  }
+  const timerText = `${secondsRemaining}s`;
+  if (egyptianWarTurnTimerValue.textContent !== timerText) {
+    egyptianWarTurnTimerValue.textContent = timerText;
+  }
   const progress = egyptianWarTurnTimerBar.parentElement;
-  progress.setAttribute("aria-valuenow", String(Math.round(percentRemaining)));
+  const progressValue = String(Math.round(percentRemaining));
+  if (progress.getAttribute("aria-valuenow") !== progressValue) {
+    progress.setAttribute("aria-valuenow", progressValue);
+  }
 }
 
 function showEgyptianWarGame(game) {
@@ -444,6 +457,8 @@ function reopenEgyptianWarSidePanel() {
 }
 
 function updateEgyptianWarTurnTimer(state) {
+  egyptianWarTimerAnimation?.cancel();
+  egyptianWarTimerAnimation = null;
   egyptianWarTimerDurationMs = state.turnTimerSeconds * 1000;
   egyptianWarTimerRemainingMs = state.turnTimeRemainingMs;
   egyptianWarTimerDeadline =
@@ -459,6 +474,16 @@ function updateEgyptianWarTurnTimer(state) {
     state.turnTimeRemainingMs === null
   );
   renderEgyptianWarTurnTimer();
+  if (egyptianWarTimerDeadline !== null && state.turnTimeRemainingMs > 0) {
+    egyptianWarTimerAnimation = egyptianWarTurnTimerBar.animate?.([
+      { transform: egyptianWarTurnTimerBar.style.transform },
+      { transform: "scaleX(0)" }
+    ], {
+      duration: Math.max(0, egyptianWarTimerDeadline - performance.now()),
+      easing: "linear",
+      fill: "forwards"
+    }) ?? null;
+  }
 }
 
 
@@ -1327,6 +1352,9 @@ function applyEgyptianWarDisplay() {
   if (!root) return;
   root.dataset.cardStyle = currentContext.display?.get("cardStyle") ?? "classic";
   root.dataset.tableColor = currentContext.display?.get("tableColor") ?? "green";
+  root.dataset.shadows = currentContext.display?.get("shadows") ?? "full";
+  root.dataset.cardAnimations = currentContext.display?.get("cardAnimations") ?? "full";
+  root.dataset.tableDetail = currentContext.display?.get("tableDetail") ?? "textured";
 }
 
 let offlinePlayers = [];

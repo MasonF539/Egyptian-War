@@ -85,6 +85,16 @@ test("button hints follow keyboard availability and remapping, while themes rema
     preferences.tableColor = "burgundy";
     displayChanged();
     assert.equal(view.window.document.body.dataset.tableColor, "burgundy");
+    assert.equal(view.window.document.body.dataset.shadows, "full");
+    assert.equal(view.window.document.body.dataset.cardAnimations, "full");
+    assert.equal(view.window.document.body.dataset.tableDetail, "textured");
+    Object.assign(preferences, { shadows: "reduced", cardAnimations: "off", tableDetail: "simple" });
+    displayChanged();
+    assert.equal(view.window.document.body.dataset.shadows, "reduced");
+    assert.equal(view.window.document.body.dataset.cardAnimations, "off");
+    assert.equal(view.window.document.body.dataset.tableDetail, "simple");
+    assert.equal(view.window.document.body.dataset.cardStyle, "midnight");
+    assert.equal(view.window.document.body.dataset.tableColor, "burgundy");
   } finally { view.close(); }
   assert.equal(bindingChanged, null);
   assert.equal(displayChanged, null);
@@ -407,4 +417,92 @@ test("expanded rules stay above overlapping seats and refit when reopened", () =
     view.window.HTMLElement.prototype.getBoundingClientRect = original;
     view.close();
   }
+});
+
+
+test("timer scales without changing layout and only rewrites changed seconds", () => {
+  const view = mountClient();
+  const state = {
+    status: "playing", players: [], currentPlayerId: null, recentCards: [],
+    winnerId: null, isPaused: true, isAnimating: false, turnTimerSeconds: 15,
+    turnTimeRemainingMs: 15000, challenge: null, pileCardCount: 0,
+    hasFaceUpCards: false, activityMessage: "", canPlayCard: false
+  };
+  try {
+    const bar = view.el("egyptian-war-turn-timer-bar");
+    const label = view.el("egyptian-war-turn-timer-value");
+    view.instance.receiveState(state);
+    assert.equal(bar.style.transform, "scaleX(1)");
+    const changes = new view.window.MutationObserver(() => {});
+    changes.observe(label, { childList: true, characterData: true, subtree: true });
+    view.instance.receiveState({ ...state, turnTimeRemainingMs: 14900 });
+    assert.equal(changes.takeRecords().length, 0);
+    assert.equal(bar.style.width, "100%", "The fill width stays fixed for layout");
+    assert.ok(Number(bar.style.transform.slice(7, -1)) < 1);
+    view.instance.receiveState({ ...state, turnTimeRemainingMs: 14000 });
+    assert.equal(label.textContent, "14s");
+    assert.ok(changes.takeRecords().length > 0);
+    assert.equal(bar.parentElement.getAttribute("aria-valuenow"), "93");
+    view.instance.receiveState({ ...state, turnTimeRemainingMs: 0 });
+    assert.equal(bar.style.transform, "scaleX(0)");
+    assert.equal(label.textContent, "0s");
+    view.instance.receiveState({ ...state, isAnimating: true });
+    assert.equal(view.el("egyptian-war-turn-timer").classList.contains("is-hidden"), true);
+    view.instance.receiveState(state);
+    assert.equal(bar.style.transform, "scaleX(1)");
+    assert.equal(view.el("egyptian-war-turn-timer").classList.contains("is-hidden"), false);
+    changes.disconnect();
+  } finally { view.close(); }
+});
+
+
+test("one timer animation spans the remaining turn and is replaced on pause or reset", () => {
+  const view = mountClient();
+  const state = {
+    status: "playing", players: [], currentPlayerId: null, recentCards: [],
+    winnerId: null, isPaused: false, isAnimating: false, turnTimerSeconds: 15,
+    turnTimeRemainingMs: 15000, challenge: null, pileCardCount: 0,
+    hasFaceUpCards: false, activityMessage: "", canPlayCard: false
+  };
+  const animations = [];
+  view.window.performance.now = () => 1000;
+  view.el("egyptian-war-turn-timer-bar").animate = (frames, options) => {
+    const animation = { frames, options, cancelled: false, cancel() { this.cancelled = true; } };
+    animations.push(animation);
+    return animation;
+  };
+  try {
+    view.instance.receiveState(state);
+    assert.equal(animations.length, 1);
+    assert.equal(animations[0].options.duration, 15000);
+    assert.equal(animations[0].options.easing, "linear");
+    assert.equal(animations[0].frames[0].transform, "scaleX(1)");
+    assert.equal(animations[0].frames[1].transform, "scaleX(0)");
+    view.instance.receiveState({ ...state, isPaused: true, turnTimeRemainingMs: 7500 });
+    assert.equal(animations[0].cancelled, true);
+    assert.equal(animations.length, 1);
+    assert.equal(view.el("egyptian-war-turn-timer-bar").style.transform, "scaleX(0.5)");
+    view.instance.receiveState({ ...state, turnTimeRemainingMs: 7500 });
+    assert.equal(animations[1].options.duration, 7500);
+    view.instance.receiveState({ ...state, turnTimerSeconds: 30, turnTimeRemainingMs: 30000 });
+    assert.equal(animations[1].cancelled, true);
+    assert.equal(animations[2].options.duration, 30000);
+    assert.equal(animations[2].frames[0].transform, "scaleX(1)");
+    view.instance.receiveState({ ...state, turnTimerSeconds: 4, turnTimeRemainingMs: 4000 });
+    assert.equal(animations[2].cancelled, true);
+    assert.equal(animations[3].options.duration, 4000);
+    assert.equal(animations[3].frames[0].transform, "scaleX(1)");
+    view.instance.receiveState({ ...state, isPaused: true, turnTimerSeconds: 4, turnTimeRemainingMs: 2000 });
+    assert.equal(animations[3].cancelled, true);
+    assert.equal(view.el("egyptian-war-turn-timer-bar").style.transform, "scaleX(0.5)");
+    view.instance.receiveState({ ...state, turnTimerSeconds: 4, turnTimeRemainingMs: 2000 });
+    assert.equal(animations[4].options.duration, 2000);
+    assert.equal(animations[4].frames[0].transform, "scaleX(0.5)");
+    view.instance.receiveState({ ...state, isAnimating: true });
+    assert.equal(animations[4].cancelled, true);
+    assert.equal(animations.length, 5);
+    view.instance.receiveState(state);
+    view.instance.destroy();
+    assert.equal(animations[5].cancelled, true);
+  } finally { view.close(); }
 });

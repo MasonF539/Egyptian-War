@@ -99,3 +99,12 @@ The lockfile records the published SDK artifact used for development and tests.
 Use Node 24 for development and verification, matching CI. The Node >=20 engine
 range describes the game package's production runtime; it does not promise that
 all development dependencies support Node 20.
+
+
+### Personal performance options
+
+In GameHub, open Settings > Graphics > Game-Specific Graphics > Egyptian War.
+For a lighter rendering comparison, choose **Reduced** shadows and glows, turn
+flying hands and cards **Off**, and select **Simple** table detail. Each choice
+applies immediately and is saved in your browser. Defaults retain the original
+visuals; game rules, server timing, and sound cues are unchanged.

@@ -43,6 +43,18 @@ const egyptianWarDisplayOptions = [
       { value: "green", label: "Emerald", previewPath: "/games/egyptian-war/assets/display/table-green.svg" },
       { value: "blue", label: "Ocean", previewPath: "/games/egyptian-war/assets/display/table-blue.svg" },
       { value: "burgundy", label: "Burgundy", previewPath: "/games/egyptian-war/assets/display/table-burgundy.svg" }
+    ] },
+    { key: "shadows", label: "Shadows and glows", defaultValue: "full", choices: [
+      { value: "full", label: "Full" },
+      { value: "reduced", label: "Reduced" }
+    ] },
+    { key: "cardAnimations", label: "Flying hands and cards", defaultValue: "full", choices: [
+      { value: "full", label: "On" },
+      { value: "off", label: "Off" }
+    ] },
+    { key: "tableDetail", label: "Table detail", defaultValue: "textured", choices: [
+      { value: "textured", label: "Textured" },
+      { value: "simple", label: "Simple" }
     ] }
   ];
 
@@ -210,7 +222,7 @@ export const egyptianWar: GameDefinition & { displayOptions: typeof egyptianWarD
 
 export const egyptianWarManifest: GamePluginManifest = {
   apiVersion: gameHubGameApiVersion,
-  packageVersion: "1.0.1-beta.7",
+  packageVersion: "1.0.1",
   definition: egyptianWar,
   client: {
     delivery: "embedded",

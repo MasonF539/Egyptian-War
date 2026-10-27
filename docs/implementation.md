@@ -179,3 +179,36 @@ the list height from seat bounds; Show/Hide also refits it immediately. Saved
 expansion choices and table/button positions are unchanged. Geometry regression
 coverage checks refitting, and Edge measurements cover default/all rules with
 eight players at 1920x1080, 1366x768, 1280x800, 1024x768, 390x844, and 360x640.
+
+
+The turn timer keeps its fill at full layout width and animates the remaining
+fraction with a left-origin scale transform. One linear browser animation spans
+the server-provided remaining time, replacing repeated width/transform
+transitions. Pause, resolution, and unmount cancel it; resume uses the remaining
+time and a new turn resets it. The same code handles custom turn lengths and
+the server's four-second final-card slap window without a separate client
+constant. Browsers without element.animate retain the periodic transform fill.
+Seconds text and accessible progress values update only when
+they change. Server deadlines, pause/resume behavior, and resolution animations
+are unchanged. This targets a suspected source of phone frame drops; improvement
+on the reporting physical device still needs confirmation.
+
+GameHub owns the browser-local Background blur preference under Settings >
+Graphics > General Graphics. Blur defaults off for the main menu, lobby, and
+games; the game's stylesheet does not override this choice. Existing personal
+card and table choices are under Game-Specific Graphics. Game rules are
+unaffected.
+
+
+Egyptian War exposes three optional personal performance dropdowns through the
+existing display-options schema: Shadows and glows (Full/Reduced), Flying hands
+and cards (On/Off), and Table detail (Textured/Simple). Defaults retain the
+original visuals. Changes apply immediately through the existing display
+subscription and are saved by GameHub alongside personal card/table choices.
+Reduced shadows remove seat/card shadows and winner glow animation while
+retaining current-player and winner borders. Turning flying effects off hides
+transient hands/transfer cards and stops card-dealing animation; the central
+card, messages, sounds, and resolution timing remain unchanged. Simple felt
+removes layered gradients and speckle texture, retaining the selected table
+color, rounded shape, and frame. These are rendering options, not game rules;
+physical-phone comparison is required to measure their benefit.

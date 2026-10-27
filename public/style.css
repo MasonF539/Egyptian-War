@@ -68,6 +68,8 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
 .egyptian-war-turn-timer .progress-bar {
   position: relative;
   z-index: 2;
+  transform-origin: left center;
+  transition: none;
 }
 
 .egyptian-war-timer-sleep-pattern {
@@ -1871,4 +1873,43 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   .egyptian-war-side-panel {
     max-width: max(0px, calc(100% - clamp(16rem, 52%, 44rem) - 4rem));
   }
+}
+
+
+/* Personal performance options leave game timing and outcome cues intact. */
+[data-shadows="reduced"] :is(.egyptian-war-seat, .playing-card, .egyptian-war-flying-card) {
+  box-shadow: none;
+}
+
+[data-shadows="reduced"] .egyptian-war-seat.is-pile-winner {
+  animation: none;
+}
+
+[data-shadows="reduced"] :is(.egyptian-war-flying-hand, .egyptian-war-card-play-hand, .playing-card-center) {
+  filter: none;
+}
+
+[data-card-animations="off"] :is(.egyptian-war-flying-hand, .egyptian-war-card-play-hand, .egyptian-war-flying-card) {
+  display: none;
+  animation: none;
+}
+
+[data-card-animations="off"] .playing-card.is-dealing {
+  animation: none;
+}
+
+[data-table-detail="simple"] .egyptian-war-felt {
+  background: #1b6a46;
+}
+
+[data-table-detail="simple"][data-table-color="blue"] .egyptian-war-felt {
+  background: #18566e;
+}
+
+[data-table-detail="simple"][data-table-color="burgundy"] .egyptian-war-felt {
+  background: #702e43;
+}
+
+[data-table-detail="simple"] .egyptian-war-felt::after {
+  display: none;
 }
