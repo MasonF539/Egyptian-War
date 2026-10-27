@@ -374,3 +374,37 @@ for (const action of ["play", "slap", "pause", "kick", "chat"]) {
     } finally { view.close(); }
   });
 }
+
+
+test("expanded rules stay above overlapping seats and refit when reopened", () => {
+  const view = mountClient();
+  const state = { status: "playing", players: [
+    { id: "me", name: "Me", avatar: "M", isConnected: true, cardCount: 26 },
+    { id: "guest", name: "Guest", avatar: "G", isConnected: true, cardCount: 26 }
+  ], currentPlayerId: "me", recentCards: [], winnerId: null, isPaused: false,
+    isAnimating: false, turnTimerSeconds: 15, turnTimeRemainingMs: 15000,
+    challenge: null, pileCardCount: 0, hasFaceUpCards: false,
+    activityMessage: "", canPlayCard: true };
+  const original = view.window.HTMLElement.prototype.getBoundingClientRect;
+  let seatTop = 180;
+  view.window.HTMLElement.prototype.getBoundingClientRect = function () {
+    if (this.id === "egyptian-war-slap-rules") return { left: 20, right: 260, top: 30, bottom: 340, width: 240, height: 310 };
+    if (this.id === "egyptian-war-slap-rules-list") return { left: 30, right: 250, top: 70, bottom: 330, width: 220, height: 260 };
+    if (this.classList.contains("egyptian-war-seat")) return { left: 100, right: 270, top: seatTop, bottom: seatTop + 50, width: 170, height: 50 };
+    return original.call(this);
+  };
+  try {
+    view.instance.receiveState(state);
+    assert.equal(view.el("egyptian-war-slap-rules-list").style.maxHeight, "92px");
+    seatTop = 300;
+    view.instance.receiveState(state);
+    assert.equal(view.el("egyptian-war-slap-rules-list").style.maxHeight, "212px");
+    view.el("toggle-slap-rules").click();
+    seatTop = 220;
+    view.el("toggle-slap-rules").click();
+    assert.equal(view.el("egyptian-war-slap-rules-list").style.maxHeight, "132px");
+  } finally {
+    view.window.HTMLElement.prototype.getBoundingClientRect = original;
+    view.close();
+  }
+});

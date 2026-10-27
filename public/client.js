@@ -72,6 +72,7 @@ function setSlapRulesExpanded(expanded) {
   toggleSlapRulesButton.textContent = expanded ? "Hide" : "Show";
   egyptianWarSlapRulesList.hidden = !expanded;
   egyptianWarSlapRulesList.parentElement.classList.toggle("is-collapsed", !expanded);
+  fitEgyptianWarTableContent();
 }
 
 function restoreLayoutPreferences() {
@@ -304,6 +305,18 @@ function fitEgyptianWarTableContent() {
       top: Math.min(box.top, actions.top), bottom: Math.max(box.bottom, actions.bottom)
     } : box;
   });
+  if (!egyptianWarSlapRulesList.hidden) {
+    const rules = egyptianWarSlapRulesList.parentElement.getBoundingClientRect();
+    const list = egyptianWarSlapRulesList.getBoundingClientRect();
+    let availableBottom = globalScope.innerHeight - 8;
+    for (const seat of seats) {
+      if (seat.right > rules.left && seat.left < rules.right && seat.bottom > rules.top) {
+        availableBottom = Math.min(availableBottom, seat.top - 8);
+      }
+    }
+    const bottomInset = rules.bottom - list.bottom;
+    egyptianWarSlapRulesList.style.maxHeight = `${Math.max(0, availableBottom - list.top - bottomInset)}px`;
+  }
   const centerX = bounds.left + bounds.width / 2;
   // A narrow center column clears the diagonal seats on shallow oval tables.
   const shallowOval = bounds.height <= 220 && bounds.width >= bounds.height;

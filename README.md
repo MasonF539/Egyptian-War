@@ -92,3 +92,10 @@ The repository includes its own README, license, TypeScript settings, tests,
 public assets, package metadata, and ignore rules. Its only GameHub code
 dependency is the compatible `@masonf539/game-sdk` peer range in `package.json`.
 The lockfile records the published SDK artifact used for development and tests.
+
+
+## Node versions
+
+Use Node 24 for development and verification, matching CI. The Node >=20 engine
+range describes the game package's production runtime; it does not promise that
+all development dependencies support Node 20.

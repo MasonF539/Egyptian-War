@@ -278,6 +278,7 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
 }
 
 .egyptian-war-slap-rules ul {
+  overflow-y: auto;
   padding-left: 1rem;
   margin: 0;
 }

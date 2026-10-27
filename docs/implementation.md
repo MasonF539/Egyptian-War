@@ -171,3 +171,11 @@ The verification workflow commands also pass in a clean Linux Node 24 container:
 fresh registry installation, type checks, all 95 tests, and the package dry-run.
 The source mount is read-only; generated files remain inside the disposable
 container. This is local Linux verification, not a GitHub-hosted Actions result.
+
+
+Expanded slap rules now keep their top-left position and scroll within the space
+above horizontally overlapping seats. The existing table-layout pass computes
+the list height from seat bounds; Show/Hide also refits it immediately. Saved
+expansion choices and table/button positions are unchanged. Geometry regression
+coverage checks refitting, and Edge measurements cover default/all rules with
+eight players at 1920x1080, 1366x768, 1280x800, 1024x768, 390x844, and 360x640.
