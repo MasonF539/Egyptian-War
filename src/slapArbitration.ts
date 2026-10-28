@@ -8,14 +8,17 @@ export const defaultSlapJitterMs = 25;
 
 const secureRandomRange = 0x1_0000_0000;
 
+/** Returns a cryptographically generated random value from zero inclusive to one exclusive. */
 function secureRandomUnitInterval(): number {
   return randomInt(secureRandomRange) / secureRandomRange;
 }
 
+/** Combines player jitter into a comparison window clamped to the allowed limits. */
 export function getSlapComparisonWindow(
   firstJitterMs: number,
   secondJitterMs: number
 ): number {
+  /** Converts a jitter estimate to a nonnegative finite value, using the default when invalid. */
   const normalizeJitter = (jitterMs: number): number =>
     Number.isFinite(jitterMs)
       ? Math.max(0, jitterMs)
@@ -36,6 +39,7 @@ export type TimedSlapCandidate = {
   jitterMs: number;
 };
 
+/** Selects among valid near-simultaneous slaps with weights favoring earlier server arrivals. */
 export function selectWeightedSlapWinner<
   T extends TimedSlapCandidate
 >(

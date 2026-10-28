@@ -100,6 +100,7 @@ class EgyptianWarSession implements GameSession {
   private readonly autoPlayingMembers = new Set<string>();
   private readonly offlineDeadlines = new Map<string, number>();
 
+  /** Creates the authoritative game session from current room members and confirmed settings. */
   constructor(
     private readonly context: GameSessionContext & { recordStat?: (memberId: string, key: string) => void },
     settings: Readonly<Record<string, GameSettingValue>>
@@ -136,10 +137,12 @@ class EgyptianWarSession implements GameSession {
     );
   }
 
+  /** Starts the session's initial turn timer. */
   start(): void {
     this.startTurnTimer();
   }
 
+  /** Returns pause, busy, and disconnection status for GameHub's lifecycle controls. */
   getLifecycleState() {
     return {
       isPaused: this.isPaused,
@@ -148,6 +151,7 @@ class EgyptianWarSession implements GameSession {
     };
   }
 
+  /** Builds the match snapshot for the specified viewer. */
   getPublicState(_viewer: GameViewer): unknown {
     const connectedIds = new Set(
       this.context.members()
@@ -167,6 +171,7 @@ class EgyptianWarSession implements GameSession {
     ), offlinePlayers: this.getOfflinePlayers(), serverNow: this.context.now() };
   }
 
+  /** Validates and processes an incoming game action from a room member. */
   handleAction(memberId: string, action: GameActionEnvelope) {
     if (action.type !== "play-card" && action.type !== "slap") {
       return { success: false, message: "That game action is not supported." };
@@ -183,6 +188,7 @@ class EgyptianWarSession implements GameSession {
     });
   }
 
+  /** Pauses the match while preserving pending turn and resolution state. */
   pause(): GameActionResult {
     if (this.pendingSlaps !== null) {
       return {
@@ -204,6 +210,7 @@ class EgyptianWarSession implements GameSession {
     return { success: true };
   }
 
+  /** Resumes a paused match using its preserved remaining time. */
   resume(): GameActionResult {
     if (!this.isPaused) return { success: true };
     if (this.disconnectPausedPlayerId !== null) {
@@ -216,6 +223,7 @@ class EgyptianWarSession implements GameSession {
     return { success: true };
   }
 
+  /** Tracks a disconnected player and applies the configured pause and offline grace policy. */
   memberDisconnected(memberId: string): void {
     if (this.state.status !== "playing") return;
     if (this.offlineAutoPlay && !this.offlineTimers.has(memberId)) {
@@ -267,6 +275,7 @@ class EgyptianWarSession implements GameSession {
     this.context.broadcastState();
   }
 
+  /** Restores a returning player's identity and cancels applicable offline takeover. */
   memberReconnected(memberId: string, previousMemberId = memberId): void {
     this.clearOfflineMember(previousMemberId);
     if (previousMemberId !== memberId) {
@@ -308,6 +317,7 @@ class EgyptianWarSession implements GameSession {
     this.context.broadcastState();
   }
 
+  /** Removes a departing participant and presents any resulting match completion. */
   memberRemoved(
     memberId: string,
     options?: { voluntary?: boolean }
@@ -370,6 +380,7 @@ class EgyptianWarSession implements GameSession {
     return { success: true, message: this.state.activityMessage };
   }
 
+  /** Cancels session-owned timers and releases pending game work. */
   dispose(): void {
     this.disposed = true;
     this.clearTurnTimer();
@@ -378,6 +389,7 @@ class EgyptianWarSession implements GameSession {
     this.autoPlayingMembers.clear();
   }
 
+  /** Returns the disconnected players and their current autoplay deadlines. */
   private getOfflinePlayers() {
     return this.context.members().filter((member) => member.role === "player" && !member.isConnected)
       .map((member) => ({ id: member.id, name: member.name,
@@ -385,6 +397,7 @@ class EgyptianWarSession implements GameSession {
         autoPlaying: this.autoPlayingMembers.has(member.id) }));
   }
 
+  /** Cancels offline recovery state and timers for the specified member. */
   private clearOfflineMember(memberId: string): void {
     const timer = this.offlineTimers.get(memberId);
     if (timer !== undefined) clearTimeout(timer);
@@ -393,6 +406,7 @@ class EgyptianWarSession implements GameSession {
     this.autoPlayingMembers.delete(memberId);
   }
 
+  /** Notifies viewers that the match's pause state has changed. */
   private emitPauseChanged(): void {
     this.context.emitEvent({
       type: "pause-changed",
@@ -400,12 +414,14 @@ class EgyptianWarSession implements GameSession {
     });
   }
 
+  /** Returns the active or preserved turn time remaining in milliseconds. */
   private getTurnTimeRemainingMs(): number | null {
     return this.turnDeadlineAt === null
       ? this.turnTimeRemainingMs
       : Math.max(0, this.turnDeadlineAt - this.context.now());
   }
 
+  /** Cancels the active turn timeout and optionally discards the preserved remaining time. */
   private clearTurnTimer(clearRemaining = true): void {
     if (this.turnTimer !== null) clearTimeout(this.turnTimer);
     this.turnTimer = null;
@@ -413,17 +429,20 @@ class EgyptianWarSession implements GameSession {
     if (clearRemaining) this.turnTimeRemainingMs = null;
   }
 
+  /** Preserves the time remaining and cancels the active turn timeout. */
   private suspendTurnTimer(): void {
     this.turnTimeRemainingMs = this.getTurnTimeRemainingMs();
     this.clearTurnTimer(false);
   }
 
+  /** Returns the normal turn duration or the shorter final-card slap-window duration. */
   private get turnDurationMs(): number {
     return this.state.pendingPileWinnerId !== null
       ? finalSlapWindowMs
       : this.turnTimerSeconds * 1000;
   }
 
+  /** Schedules the next turn deadline using remaining time and offline/reconnect grace rules. */
   private startTurnTimer(
     remainingMs = this.turnTimeRemainingMs ?? this.turnDurationMs
   ): void {
@@ -463,6 +482,7 @@ class EgyptianWarSession implements GameSession {
     }, delay);
   }
 
+  /** Collects an eligible slap for comparison with near-simultaneous arrivals. */
   private collectSlap(memberId: string, respond: (result: GameActionResult) => void): void {
     if (this.pendingSlaps === null) {
       this.pendingSlaps = {
@@ -484,12 +504,14 @@ class EgyptianWarSession implements GameSession {
     respond({ success: true });
   }
 
+  /** Cancels the slap collection timer and resolves pending slap requests. */
   private cancelPendingSlaps(): void {
     if (this.pendingSlaps === null) return;
     clearTimeout(this.pendingSlaps.timer);
     this.pendingSlaps = null;
   }
 
+  /** Selects and applies the winner among eligible collected slaps. */
   private resolveSlaps(): void {
     const resolution = this.pendingSlaps;
     this.pendingSlaps = null;
@@ -529,6 +551,7 @@ class EgyptianWarSession implements GameSession {
 
   // True when a slap that lost a race with a card play should be ignored
   // instead of punished as a false slap.
+  /** Checks whether a stale slap should be forgiven after racing with a card play. */
   private isForgivenStaleSlap(clientPileVersion: number | null): boolean {
     const change = this.lastPileChange;
     return (
@@ -541,6 +564,7 @@ class EgyptianWarSession implements GameSession {
     );
   }
 
+  /** Applies an engine action, schedules its presentation, and updates game deadlines and viewers. */
   private applyAction(
     memberId: string,
     action: EgyptianWarAction,
@@ -723,6 +747,7 @@ class EgyptianWarSession implements GameSession {
     }, duration);
   }
 
+  /** Shows the win caused by a player's removal before completing the session. */
   private presentRemovalWin(removedId: string): void {
     const winner = this.state.players.find((player) => player.id === this.state.winnerId);
     const animation = {
@@ -747,6 +772,7 @@ class EgyptianWarSession implements GameSession {
     }, animationDurationsMs.finalWin);
   }
 
+  /** Completes the match through GameHub using the authoritative winner and result message. */
   private finish(): void {
     this.clearTurnTimer();
     this.cancelPendingSlaps();
@@ -757,6 +783,7 @@ class EgyptianWarSession implements GameSession {
     });
   }
 
+  /** Replaces a reconnecting member's old socket ID throughout session-owned state. */
   private remapMemberId(previousId: string, memberId: string): void {
     const player = this.state.players.find((candidate) => candidate.id === previousId);
     if (player) player.id = memberId;
@@ -789,6 +816,7 @@ class EgyptianWarSession implements GameSession {
 
 export const egyptianWarServer: GameServerPlugin = {
   manifest: egyptianWarManifest,
+  /** Creates a game session using GameHub's context and the confirmed room settings. */
   createSession(context, settings) {
     return new EgyptianWarSession(context, settings);
   }

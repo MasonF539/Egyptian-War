@@ -5,6 +5,7 @@ let timerInterval = null;
 
 const egyptianWarRoot =
   document.querySelector('[data-game-plugin-root="egyptian-war"]') ?? document;
+/** Finds a game element inside the mounted Egyptian War root. */
 const findEgyptianWarElement = (selector) => egyptianWarRoot.querySelector(selector);
 const egyptianWarTurn = findEgyptianWarElement("#egyptian-war-turn");
 const egyptianWarTurnTimer = findEgyptianWarElement("#egyptian-war-turn-timer");
@@ -46,6 +47,7 @@ let egyptianWarSidePanelReopenMode = "medium";
 let egyptianWarUnreadChatCount = 0;
 
 const layoutStorageKey = "egyptian-war:layout";
+/** Reads saved panel and rules expansion preferences with a safe fallback. */
 function readLayoutPreferences() {
   try {
     const saved = JSON.parse(localStorage.getItem(layoutStorageKey) ?? "{}");
@@ -55,6 +57,7 @@ function readLayoutPreferences() {
   }
 }
 
+/** Saves panel size, minimized state, and rules expansion in browser storage. */
 function saveLayoutPreferences() {
   try {
     localStorage.setItem(layoutStorageKey, JSON.stringify({
@@ -67,6 +70,7 @@ function saveLayoutPreferences() {
   }
 }
 
+/** Shows or collapses slap rules and refits the table's available content space. */
 function setSlapRulesExpanded(expanded) {
   toggleSlapRulesButton.setAttribute("aria-expanded", String(expanded));
   toggleSlapRulesButton.textContent = expanded ? "Hide" : "Show";
@@ -75,6 +79,7 @@ function setSlapRulesExpanded(expanded) {
   fitEgyptianWarTableContent();
 }
 
+/** Restores saved panel/rules choices or chooses defaults for the current viewport. */
 function restoreLayoutPreferences() {
   const saved = readLayoutPreferences();
   const narrow = globalScope.matchMedia?.("(max-width: 575.98px)").matches === true;
@@ -101,13 +106,17 @@ let egyptianWarTimerDeadline = null;
 let egyptianWarTimerAnimation = null;
 let egyptianWarInputUnsubscribers = [];
 
+/** Returns the game audio service or a harmless fallback when audio is unavailable. */
 function getAudio() {
   return currentContext?.audio ?? globalScope.GameHubAudio ?? {
+    /** Provides a no-op audio fallback when the host does not supply an audio service. */
     playEffect() {},
+    /** Provides a no-op audio fallback when the host does not supply an audio service. */
     setScene() {}
   };
 }
 
+/** Builds a button that requests removal of the specified member. */
 function createKickPlayerButton(member, className) {
   const button = document.createElement("button");
   button.className = className;
@@ -123,6 +132,7 @@ function createKickPlayerButton(member, className) {
   return button;
 }
 
+/** Creates the desktop and mobile glyphs used by a flying slap hand. */
 function createEgyptianWarSlapHand() {
   const handGlyph = document.createElement("span");
   handGlyph.className = "egyptian-war-flying-hand-glyph";
@@ -139,6 +149,7 @@ function createEgyptianWarSlapHand() {
   handGlyph.append(desktopHand, mobileHand);
   return handGlyph;
 }
+/** Rebuilds the visible slap-rule list from the confirmed game settings. */
 function renderEgyptianWarSlapRules(settings) {
   const rules = [
     settings.includeJokers && "Joker: always slappable",
@@ -177,6 +188,7 @@ function renderEgyptianWarSlapRules(settings) {
   egyptianWarSlapRulesList.appendChild(eliminatedCooldownItem);
 }
 
+/** Changes timer visibility and cancels its visual animation when hidden. */
 function setEgyptianWarTimerHidden(isHidden) {
   if (isHidden) {
     egyptianWarTimerAnimation?.cancel();
@@ -189,6 +201,7 @@ function setEgyptianWarTimerHidden(isHidden) {
   );
 }
 
+/** Cancels sound effects scheduled by the previous outcome animation. */
 function clearEgyptianWarSoundTimeouts() {
   for (const timeout of egyptianWarSoundTimeouts) {
     clearTimeout(timeout);
@@ -197,6 +210,7 @@ function clearEgyptianWarSoundTimeouts() {
   egyptianWarSoundTimeouts = [];
 }
 
+/** Plays a sound now or schedules it for the requested presentation delay. */
 function queueEgyptianWarSound(effectName, delayMs = 0) {
   if (delayMs <= 0) {
     getAudio().playEffect(effectName);
@@ -212,6 +226,7 @@ function queueEgyptianWarSound(effectName, delayMs = 0) {
   egyptianWarSoundTimeouts.push(timeout);
 }
 
+/** Refreshes the seconds label and accessible progress using the local turn deadline. */
 function renderEgyptianWarTurnTimer() {
   renderOfflineStatus();
   if (egyptianWarTurnTimer.classList.contains("is-hidden")) {
@@ -247,6 +262,7 @@ function renderEgyptianWarTurnTimer() {
   }
 }
 
+/** Resets transient presentation state and restores preferences for a newly mounted match. */
 function showEgyptianWarGame(game) {
   getAudio().setScene("egyptian-war");
   previousEgyptianWarState = null;
@@ -283,6 +299,7 @@ let tableLayoutObserver = null;
 
 // End seats stay centered; remaining players use evenly spaced flat-side slots.
 // List seats clockwise so their visible order continues to match turn order.
+/** Computes clockwise seat positions along the rectangular table's flat edges. */
 function egyptianWarRectangleSeats(count) {
   const rightCount = Math.ceil((count - 2) / 2);
   const leftCount = Math.floor((count - 2) / 2);
@@ -298,6 +315,7 @@ function egyptianWarRectangleSeats(count) {
 }
 
 // Reveal new activity without interrupting a reader on unchanged timer snapshots.
+/** Updates changed table text and reveals new activity without resetting unchanged text. */
 function setEgyptianWarTableText(element, text) {
   const next = text ?? "";
   if (element.textContent === next) return;
@@ -305,6 +323,7 @@ function setEgyptianWarTableText(element, text) {
   findEgyptianWarElement(".egyptian-war-table-updates").scrollTop = 0;
 }
 
+/** Fits rules and central table information around measured player-seat bounds. */
 function fitEgyptianWarTableContent() {
   const arena = egyptianWarArena;
   const info = findEgyptianWarElement(".egyptian-war-table-info");
@@ -356,6 +375,7 @@ function fitEgyptianWarTableContent() {
   info.style.bottom = `${bottom}px`;
 }
 
+/** Cancels game presentation timers and observers and clears transient visuals. */
 function destroyEgyptianWarGame() {
   tableLayoutObserver?.disconnect();
   tableLayoutObserver = null;
@@ -376,6 +396,7 @@ function destroyEgyptianWarGame() {
   egyptianWarHostControls.classList.add("d-none");
 }
 
+/** Selects the chat, spectators, or scoreboard view in the game panel. */
 function showEgyptianWarSidePanel(panel) {
   if (panel === "chat" && showGameChatButton.disabled) panel = "spectators";
   for (const [name, button, content] of [
@@ -392,12 +413,14 @@ function showEgyptianWarSidePanel(panel) {
   }
 }
 
+/** Configures panel availability using the game's chat setting. */
 function configureEgyptianWarSidePanel(chatEnabled) {
   showGameChatButton.disabled = !chatEnabled;
   showEgyptianWarSidePanel(chatEnabled ? "chat" : "spectators");
 }
 
 // mode is "closed" (just the circle button), "medium" or "large".
+/** Applies the closed, medium, or large panel mode and updates its controls. */
 function setEgyptianWarSidePanelMode(mode) {
   const isClosed = mode === "closed";
   const isExpanded = mode === "large";
@@ -430,10 +453,12 @@ function setEgyptianWarSidePanelMode(mode) {
   saveLayoutPreferences();
 }
 
+/** Switches the panel between its medium and large sizes. */
 function setEgyptianWarSidePanelExpanded(isExpanded) {
   setEgyptianWarSidePanelMode(isExpanded ? "large" : "medium");
 }
 
+/** Refreshes unread chat counts and the panel button's accessible label. */
 function renderEgyptianWarChatBadge() {
   const count = egyptianWarUnreadChatCount;
   egyptianWarChatBadge.hidden = count === 0;
@@ -445,17 +470,20 @@ function renderEgyptianWarChatBadge() {
   openGameSidePanelButton.title = label;
 }
 
+/** Collapses the panel to its reopen button and restores focus there. */
 function minimizeEgyptianWarSidePanel() {
   setEgyptianWarSidePanelMode("closed");
   openGameSidePanelButton.focus();
 }
 
+/** Restores the remembered open panel size and focuses its selected tab. */
 function reopenEgyptianWarSidePanel() {
   setEgyptianWarSidePanelMode(egyptianWarSidePanelReopenMode);
   const selectedTab = findEgyptianWarElement('.egyptian-war-side-tabs [aria-selected="true"]');
   selectedTab.focus();
 }
 
+/** Restarts the visual countdown from the server's remaining duration, including short slap windows. */
 function updateEgyptianWarTurnTimer(state) {
   egyptianWarTimerAnimation?.cancel();
   egyptianWarTimerAnimation = null;
@@ -489,6 +517,7 @@ function updateEgyptianWarTurnTimer(state) {
 
 
 
+/** Builds a face-up card element in the selected personal card style. */
 function createEgyptianWarCard(card, offset = 0) {
   const rankLabels = {
     jack: "J",
@@ -563,6 +592,7 @@ function createEgyptianWarCard(card, offset = 0) {
   return cardElement;
 }
 
+/** Returns an element's center relative to the arena's coordinate system. */
 function getEgyptianWarCenter(element, within) {
   const rect = element.getBoundingClientRect();
   const parentRect = within.getBoundingClientRect();
@@ -573,6 +603,7 @@ function getEgyptianWarCenter(element, within) {
   };
 }
 
+/** Presents card, slap, transfer, and win effects for a server-resolved action. */
 function animateEgyptianWarOutcome(animation) {
   const prefersReducedMotion = window.matchMedia(
     "(prefers-reduced-motion: reduce)"
@@ -788,6 +819,7 @@ function animateEgyptianWarOutcome(animation) {
     ? winnerCenter
     : center;
 
+  /** Creates the flying cards that visualize a pile transfer or false-slap penalty. */
   const showTransfer = () => {
     for (let index = 0; index < transferCount; index += 1) {
       const back = document.createElement("span");
@@ -852,6 +884,7 @@ function animateEgyptianWarOutcome(animation) {
 
   clearTimeout(egyptianWarWinnerRevealTimeout);
 
+  /** Reveals the resolved pile winner and plays the associated completion sound. */
   const revealPileWinner = () => {
     revealedEgyptianWarWinnerAnimationId = animation.id;
     const currentWinnerSeat = animation.winnerId
@@ -955,6 +988,7 @@ function animateEgyptianWarOutcome(animation) {
   }, presentationDuration);
 }
 
+/** Updates seats, cards, controls, messages, and timers from an authoritative snapshot. */
 function renderEgyptianWarState(state) {
   offlinePlayers = state.offlinePlayers ?? [];
   offlinePaused = state.isPaused;
@@ -1113,6 +1147,7 @@ function renderEgyptianWarState(state) {
       seat.innerHTML = '<span class="player-avatar"></span><div class="egyptian-war-seat-details"><span class="player-name"></span><span class="egyptian-war-card-count"></span></div>';
     }
     tableLayoutObserver?.observe(seat);
+    /** Updates a seat's text only when its visible value changes. */
     const setText = (selector, value) => {
       const element = seat.querySelector(selector);
       if (element.textContent !== value) element.textContent = value;
@@ -1239,6 +1274,7 @@ function renderEgyptianWarState(state) {
 
 
 let lastSpectators = [];
+/** Refreshes the game's spectator list and host-only removal controls. */
 function renderSpectators(spectators) {
   lastSpectators = spectators;
   egyptianWarSpectatorList.replaceChildren();
@@ -1266,6 +1302,7 @@ function renderSpectators(spectators) {
   }
 }
 
+/** Appends an escaped chat message and updates unread state when appropriate. */
 function renderChatMessage(chatMessage) {
   const item = document.createElement("li");
   item.className = "egyptian-war-chat-message";
@@ -1292,6 +1329,7 @@ toggleSlapRulesButton.addEventListener("click", () => {
   setSlapRulesExpanded(expanded);
   saveLayoutPreferences();
 });
+/** Requests playing a card and ignores stale replies after the client is unmounted. */
 async function playEgyptianWarCard() {
   const context = currentContext;
   if (!context || egyptianWarPlayCardButton.disabled) return;
@@ -1299,6 +1337,7 @@ async function playEgyptianWarCard() {
   if (currentContext === context && response && !response.success) context.notify(response.message);
 }
 
+/** Requests slapping the current pile and handles the server's action response. */
 async function slapEgyptianWarPile() {
   const context = currentContext;
   if (!context || egyptianWarSlapButton.disabled) return;
@@ -1336,6 +1375,7 @@ toggleGameSidePanelButton.addEventListener("click", () => {
 minimizeGameSidePanelButton.addEventListener("click", minimizeEgyptianWarSidePanel);
 openGameSidePanelButton.addEventListener("click", reopenEgyptianWarSidePanel);
 
+/** Refreshes action-button hints using the current bindings and keyboard availability. */
 function updateEgyptianWarKeyHints() {
   const keyboard = currentContext?.input?.hasKeyboard?.() ?? false;
   for (const [action, id] of [["play-card", "egyptian-war-play-key"], ["slap", "egyptian-war-slap-key"]]) {
@@ -1347,6 +1387,7 @@ function updateEgyptianWarKeyHints() {
   findEgyptianWarElement("#egyptian-war-slap-subtitle").hidden = keyboard;
 }
 
+/** Applies the player's saved card, table, shadow, and flying-effect preferences. */
 function applyEgyptianWarDisplay() {
   const root = currentContext?.root;
   if (!root) return;
@@ -1361,8 +1402,10 @@ let offlinePlayers = [];
 let offlinePaused = false;
 let offlineClockOffset = 0;
 let hostRecoveryDeadline = null;
+/** Refreshes disconnected-player autoplay and host-recovery countdown text. */
 function renderOfflineStatus() {
   const now = Date.now() + offlineClockOffset;
+  /** Converts a deadline to a nonnegative, rounded-up number of seconds remaining. */
   const seconds = (at) => Math.max(0, Math.ceil((at - now) / 1000));
   const messages = offlinePlayers.map((member) => `${member.name}: ${member.autoPlaying ? "auto-playing" : member.autoPlayAt ? `auto-play in ${seconds(member.autoPlayAt)}s` : "waiting to reconnect"}`);
   if (hostRecoveryDeadline) messages.push(`Host handoff in ${seconds(hostRecoveryDeadline)}s`);
@@ -1370,6 +1413,7 @@ function renderOfflineStatus() {
   const label = findEgyptianWarElement("#egyptian-war-offline-status");
   if (label.textContent !== text) { label.textContent = text; label.title = text; }
 }
+/** Rebuilds the visible room-score table using the game's scoreboard columns. */
 function renderScoreboard(scores) {
   const container = findEgyptianWarElement("#egyptian-war-score-table");
   container.replaceChildren();
@@ -1405,6 +1449,7 @@ findEgyptianWarElement("#egyptian-war-reset-scores").addEventListener("click", a
 });
 
 const egyptianWarClientModule = {
+  /** Mounts the game client with its context and subscribes its controls to platform services. */
   mount(context) {
     currentContext = context;
     if (typeof ResizeObserver === "function") {
@@ -1427,6 +1472,7 @@ const egyptianWarClientModule = {
     timerInterval = setInterval(renderEgyptianWarTurnTimer, 100);
     return {
       receiveState: renderEgyptianWarState,
+      /** Delivers a game-specific event to the mounted client. */
       receiveEvent(event) {
         if (event.type === "notification") context.notify(event.payload?.message ?? "");
         if (event.type === "animation") activeEgyptianWarAnimation = event.payload;
@@ -1436,6 +1482,7 @@ const egyptianWarClientModule = {
           egyptianWarPauseButton.setAttribute("aria-pressed", String(paused));
         }
       },
+      /** Delivers a platform event such as host, chat, spectator, or scoreboard changes. */
       receivePlatformEvent(event) {
         if (event.type === "host-changed") {
           egyptianWarHostControls.classList.toggle("d-none", !currentContext.isHost);
@@ -1456,6 +1503,7 @@ const egyptianWarClientModule = {
         if (event.type === "spectators") renderSpectators(event.payload);
         if (event.type === "chat-message") renderChatMessage(event.payload);
       },
+      /** Releases the mounted game's subscriptions and presentation resources. */
       destroy() {
         for (const unsubscribe of egyptianWarInputUnsubscribers) unsubscribe();
         egyptianWarInputUnsubscribers = [];

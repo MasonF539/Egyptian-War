@@ -81,6 +81,7 @@ export type EgyptianWarAction = "play-card" | "slap";
 export type RandomInteger = (maxExclusive: number) => number;
 
 export class EgyptianWarRuleError extends Error {
+  /** Creates a rule-validation error containing the message to show for a rejected action. */
   constructor(message: string) {
     super(message);
     this.name = "EgyptianWarRuleError";
@@ -110,6 +111,7 @@ const standardRanks: Exclude<CardRank, "joker">[] = [
   "ace"
 ];
 
+/** Creates a fresh standard card deck, optionally including Jokers. */
 export function createDeck(
   includeJokers: boolean,
   deckCount = 1
@@ -150,6 +152,7 @@ export function createDeck(
   return deck;
 }
 
+/** Returns a shuffled copy of the deck using the supplied random-number function. */
 export function shuffleDeck(
   cards: readonly Card[],
   randomInteger: RandomInteger = randomInt
@@ -178,6 +181,7 @@ export function shuffleDeck(
   return shuffledCards;
 }
 
+/** Validates players and settings, deals the cards, and creates initial match state. */
 export function createEgyptianWarState(
   playerInputs: readonly EgyptianWarPlayerInput[],
   settings: EgyptianWarSettings,
@@ -247,10 +251,12 @@ const challengeAttempts: Partial<Record<CardRank, number>> = {
   joker: 5
 };
 
+/** Formats a card rank for game activity messages. */
 function describeCardRank(rank: CardRank): string {
   return `${rank === "ace" ? "an" : "a"} ${rank}`;
 }
 
+/** Finds the next eligible player in clockwise turn order. */
 function nextPlayerIndex(
   state: EgyptianWarState,
   fromIndex: number,
@@ -272,6 +278,7 @@ function nextPlayerIndex(
   return null;
 }
 
+/** Finishes the match when one player owns all remaining cards and no reentry play remains. */
 function endIfOnePlayerOwnsRemainingCards(
   state: EgyptianWarState
 ): boolean {
@@ -300,6 +307,7 @@ function endIfOnePlayerOwnsRemainingCards(
   return false;
 }
 
+/** Moves the pile to the winner's deck and prepares that player's next turn. */
 function awardPile(
   state: EgyptianWarState,
   playerId: string,
@@ -339,6 +347,7 @@ function awardPile(
 // still be slapped, so the message never reveals a slap opportunity.
 const pileResolvingMessage = "The pile is about to be awarded.";
 
+/** Awards the challenge pile or opens the short slap window when the last card is slappable. */
 function awardFinalPileOrOpenSlapWindow(
   state: EgyptianWarState,
   defaultWinnerId: string,
@@ -356,6 +365,7 @@ function awardFinalPileOrOpenSlapWindow(
 
 export type EgyptianWarDeparture = "removed" | "left";
 
+/** Removes a player while preserving card ownership and resolving any resulting win. */
 export function removeEgyptianWarPlayer(
   state: EgyptianWarState,
   playerId: string,
@@ -366,6 +376,7 @@ export function removeEgyptianWarPlayer(
   );
 }
 
+/** Updates engine state after removing a player from the match. */
 function removePlayer(
   state: EgyptianWarState,
   playerId: string,
@@ -513,6 +524,7 @@ function removePlayer(
   return state.activityMessage;
 }
 
+/** Passes an unfinished challenge to the next player who still holds cards. */
 function passChallengeAfterElimination(
   state: EgyptianWarState,
   playerIndex: number
@@ -570,6 +582,7 @@ function passChallengeAfterElimination(
     `${challenge.attemptsRemaining === 1 ? "attempt" : "attempts"} remaining.`;
 }
 
+/** Returns the numeric sequence value of a card rank. */
 function cardRankValue(rank: CardRank): number | null {
   if (rank === "ace") {
     return 1;
@@ -597,18 +610,22 @@ function cardRankValue(rank: CardRank): number | null {
   return values[rank];
 }
 
+/** Checks whether a card is a Jack, Queen, or King. */
 function isFaceCard(rank: CardRank): boolean {
   return rank === "jack" || rank === "queen" || rank === "king";
 }
 
+/** Checks whether a card starts or passes a face-card challenge. */
 function isChallengeCard(rank: CardRank): boolean {
   return Object.hasOwn(challengeAttempts, rank);
 }
 
+/** Checks whether the given pile matches an enabled slap pattern. */
 export function isEgyptianWarPileSlappable(pile: readonly Card[], settings: EgyptianWarSettings): boolean {
   return getEgyptianWarSlapReason(pile, settings) !== null;
 }
 
+/** Returns the enabled slap pattern matched by the pile, if any. */
 export function getEgyptianWarSlapReason(
   pile: readonly Card[],
   settings: EgyptianWarSettings
@@ -641,6 +658,7 @@ export function getEgyptianWarSlapReason(
     const aceHighValues = cards.map((card) =>
       card.rank === "ace" ? 14 : cardRankValue(card.rank)
     );
+    /** Checks whether the candidate card values form an ascending or descending sequence. */
     const isSequence = (values: Array<number | null>): boolean =>
       values.every((value) => value !== null) &&
       (
@@ -694,6 +712,7 @@ export function getEgyptianWarSlapReason(
   return null;
 }
 
+/** Checks whether the state's face-up pile currently allows a valid slap. */
 export function isEgyptianWarStateSlappable(
   state: Pick<EgyptianWarState, "pile" | "penaltyPileCardCount" | "settings">
 ): boolean {
@@ -703,6 +722,7 @@ export function isEgyptianWarStateSlappable(
   );
 }
 
+/** Starts a challenge using the attempts required by the newly played challenge card. */
 function startChallengeFromCard(
   state: EgyptianWarState,
   playerIndex: number,
@@ -736,10 +756,12 @@ function startChallengeFromCard(
 
 // pileVersion changes whenever the face-up part of the pile changes, so a
 // client can say which pile it was looking at when it slapped.
+/** Builds a signature of the face-up pile used to detect changes. */
 function faceUpPileSignature(state: EgyptianWarState): string {
   return `${state.pile.length - state.penaltyPileCardCount}:${state.pile.at(-1)?.id ?? ""}`;
 }
 
+/** Updates the pile revision when an operation changes the face-up cards. */
 function trackPileVersion<T>(state: EgyptianWarState, run: () => T): T {
   const before = faceUpPileSignature(state);
 
@@ -796,6 +818,7 @@ export function checkEgyptianWarSlapCooldown(
   return { status: "none" };
 }
 
+/** Applies a player action to authoritative engine state and returns its activity message. */
 export function applyEgyptianWarAction(
   state: EgyptianWarState,
   playerId: string,
@@ -806,6 +829,7 @@ export function applyEgyptianWarAction(
   );
 }
 
+/** Applies a play-card or slap action using the current match rules. */
 function applyAction(
   state: EgyptianWarState,
   playerId: string,
@@ -1029,12 +1053,14 @@ function applyAction(
   return state.activityMessage;
 }
 
+/** Resolves an expired turn or final-card slap deadline in authoritative state. */
 export function resolveEgyptianWarTurnTimeout(
   state: EgyptianWarState
 ): string {
   return trackPileVersion(state, () => resolveTurnTimeout(state));
 }
 
+/** Awards a pending challenge pile or automatically plays the current player's card. */
 function resolveTurnTimeout(state: EgyptianWarState): string {
   if (state.status !== "playing") {
     throw new EgyptianWarRuleError("This game has already finished.");
@@ -1066,6 +1092,7 @@ function resolveTurnTimeout(state: EgyptianWarState): string {
   return applyAction(state, currentPlayer.id, "play-card");
 }
 
+/** Builds the visible match snapshot without exposing players' hidden decks. */
 export function createPublicEgyptianWarState(
   state: EgyptianWarState,
   isPaused = false,
