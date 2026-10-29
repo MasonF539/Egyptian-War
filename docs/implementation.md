@@ -212,3 +212,8 @@ card, messages, sounds, and resolution timing remain unchanged. Simple felt
 removes layered gradients and speckle texture, retaining the selected table
 color, rounded shape, and frame. These are rendering options, not game rules;
 physical-phone comparison is required to measure their benefit.
+
+The felt includes one broad, softly feathered cross-hatched shading field,
+using low-contrast 1px strokes at 9px spacing without blur. It follows oval
+and rectangular tables beneath seats, cards, labels, and the inset frame.
+Simple table detail disables the hatching along with the speckle texture.

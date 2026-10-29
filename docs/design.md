@@ -314,3 +314,8 @@ instructions, observations, and results belong in separate playtest notes.
   controls should remain clear and accessible with keyboard or touch input.
 - **Are room totals clear?** Players should understand what each statistic counts,
   when totals disappear, and what resetting them does.
+
+The felt includes one broad, softly feathered cross-hatched shading field,
+using low-contrast 1px strokes at 9px spacing without blur. It follows oval
+and rectangular tables beneath seats, cards, labels, and the inset frame.
+Simple table detail disables the hatching along with the speckle texture.

@@ -369,6 +369,19 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   pointer-events: none;
 }
 
+/* Static cross-hatching stays inside the felt, below seats, cards, labels, and trim. */
+.egyptian-war-felt-hatching {
+  position: absolute;
+  z-index: 0;
+  inset: 1.15rem;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse, #042b1d1a, transparent 80%),
+    repeating-linear-gradient(45deg, #9fb79818 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(-45deg, #9fb79818 0 1px, transparent 1px 9px);
+  mask-image: radial-gradient(ellipse, #000 15%, #0008 48%, transparent 90%);
+}
+
 /* The measured seats bound a stable label, card, and message grid. */
 .egyptian-war-table-info {
   position: absolute;
@@ -1910,6 +1923,7 @@ body:has([data-game-plugin-root="egyptian-war"]:not([hidden])) #gameplay-view {
   background: #702e43;
 }
 
-[data-table-detail="simple"] .egyptian-war-felt::after {
+[data-table-detail="simple"] .egyptian-war-felt::after,
+[data-table-detail="simple"] .egyptian-war-felt-hatching {
   display: none;
 }
